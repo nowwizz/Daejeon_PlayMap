@@ -21,19 +21,19 @@ const CATEGORY_CONTENT_TYPE = {
 const CATEGORY_MARKER = {
   '12': {
     emoji: '📸',
-    color: '#4CAF50'
+    color:  '#E08A2E'
   },
   '25': {
     emoji: '🗺️',
-    color: '#2196F3'
+    color: '#00B398'
   },
   '39': {
     emoji: '🍴',
-    color: '#FF9800'
+    color: '#E27DA0'
   },
   '15': {
     emoji: '🎉',
-    color: '#E91E63'
+    color: '#8A6A00'
   }
 }
 
@@ -49,6 +49,7 @@ export default defineComponent({
   setup() {
     const {
       state,
+      openPlace,
       collapseSheet
     } = useAppStore()
 
