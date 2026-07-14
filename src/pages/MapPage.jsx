@@ -1,4 +1,10 @@
-import { defineComponent, onMounted, onBeforeUnmount, ref } from 'vue'
+import {
+  defineComponent,
+  onMounted,
+  onBeforeUnmount,
+  ref
+} from 'vue'
+
 import { useAppStore } from '../store/useAppStore.js'
 import { CATEGORIES } from '../theme.js'
 import SearchBar from '../components/SearchBar.jsx'
@@ -12,11 +18,39 @@ const CATEGORY_CONTENT_TYPE = {
   축제공연행사: '15'
 }
 
+const CATEGORY_MARKER = {
+  '12': {
+    emoji: '📸',
+    color: '#4CAF50'
+  },
+  '25': {
+    emoji: '🗺️',
+    color: '#2196F3'
+  },
+  '39': {
+    emoji: '🍴',
+    color: '#FF9800'
+  },
+  '15': {
+    emoji: '🎉',
+    color: '#E91E63'
+  }
+}
+
+const DEFAULT_MARKER = {
+  emoji: '📍',
+  color: '#00B398'
+}
+
+
 export default defineComponent({
   name: 'MapPage',
 
   setup() {
-    const { state, collapseSheet } = useAppStore()
+    const {
+      state,
+      collapseSheet
+    } = useAppStore()
 
     const mapContainer = ref(null)
 
@@ -31,14 +65,18 @@ export default defineComponent({
           return
         }
 
-        const existingScript = document.querySelector(
-          'script[data-kakao-map-sdk]'
-        )
+        const existingScript =
+          document.querySelector(
+            'script[data-kakao-map-sdk]'
+          )
 
         if (existingScript) {
-          existingScript.addEventListener('load', () => {
-            window.kakao.maps.load(resolve)
-          })
+          existingScript.addEventListener(
+            'load',
+            () => {
+              window.kakao.maps.load(resolve)
+            }
+          )
 
           existingScript.addEventListener(
             'error',
@@ -133,7 +171,10 @@ export default defineComponent({
 
       resizeObserver =
         new ResizeObserver(() => {
-          if (!map || !mapContainer.value) {
+          if (
+            !map ||
+            !mapContainer.value
+          ) {
             return
           }
 
@@ -194,14 +235,18 @@ export default defineComponent({
     }
 
     const clearPlaceClusters = () => {
-      if (!clusterer) return
+      if (!clusterer) {
+        return
+      }
 
       clusterer.clear()
       clusterer.setMap(null)
       clusterer = null
     }
 
-    const createPlaceClusters = (places) => {
+    const createPlaceClusters = (
+      places
+    ) => {
       const kakao = window.kakao
 
       clearPlaceClusters()
@@ -220,13 +265,20 @@ export default defineComponent({
           )
         })
         .map((place) => {
+          const markerImage =
+            createEmojiMarkerImage(
+              kakao,
+              place.contenttypeid
+            )
+
           return new kakao.maps.Marker({
             position:
               new kakao.maps.LatLng(
                 Number(place.mapy),
                 Number(place.mapx)
               ),
-            title: place.title
+            title: place.title,
+            image: markerImage
           })
         })
 
@@ -239,18 +291,78 @@ export default defineComponent({
         })
     }
 
+    const createEmojiMarkerImage = (
+      kakao,
+      contenttypeid
+    ) => {
+
+      const marker =
+        CATEGORY_MARKER[String(contenttypeid)]
+        ?? DEFAULT_MARKER
+
+      const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="56">
+
+        <path
+          d="M24 2
+            C12 2 3 11 3 23
+            C3 38 24 54 24 54
+            C24 54 45 38 45 23
+            C45 11 36 2 24 2Z"
+
+          fill="${marker.color}"
+          stroke="white"
+          stroke-width="2"/>
+
+        <circle
+          cx="24"
+          cy="23"
+          r="15"
+          fill="white"/>
+
+        <text
+          x="24"
+          y="29"
+          text-anchor="middle"
+          font-size="20">
+
+          ${marker.emoji}
+
+        </text>
+
+      </svg>
+      `
+
+      return new kakao.maps.MarkerImage(
+        "data:image/svg+xml;charset=UTF-8," +
+          encodeURIComponent(svg),
+
+        new kakao.maps.Size(48,56),
+
+        {
+          offset:
+            new kakao.maps.Point(24,56)
+        }
+      )
+    }
+
     const changeCategory = async (
       category
     ) => {
       try {
-        state.categoryFilter = category
+        state.categoryFilter =
+          category
 
         const places =
           await loadPlacesByCategory(
             category
           )
 
-        createPlaceClusters(places)
+        createPlaceClusters(
+          places
+        )
 
         console.log(
           `[${category}] 장소 개수:`,
@@ -273,9 +385,12 @@ export default defineComponent({
         const places =
           await loadAllPlaces()
 
-        state.categoryFilter = '전체'
+        state.categoryFilter =
+          '전체'
 
-        createPlaceClusters(places)
+        createPlaceClusters(
+          places
+        )
 
         console.log(
           '[전체] 장소 개수:',
@@ -326,35 +441,43 @@ export default defineComponent({
               flexShrink: 0
             }}
           >
-            {CATEGORIES.map((cat) => (
-              <div
-                key={cat}
-                onClick={() => {
-                  changeCategory(cat)
-                }}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '20px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition:
-                    'background .2s ease, color .2s ease',
-                  background:
-                    state.categoryFilter === cat
-                      ? '#00B398'
-                      : '#f2f2f2',
-                  color:
-                    state.categoryFilter === cat
-                      ? '#fff'
-                      : '#444'
-                }}
-              >
-                {cat}
-              </div>
-            ))}
+            {CATEGORIES.map(
+              (cat) => (
+                <div
+                  key={cat}
+                  onClick={() => {
+                    changeCategory(cat)
+                  }}
+                  style={{
+                    padding:
+                      '8px 14px',
+                    borderRadius:
+                      '20px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    whiteSpace:
+                      'nowrap',
+                    cursor:
+                      'pointer',
+                    flexShrink: 0,
+                    transition:
+                      'background .2s ease, color .2s ease',
+                    background:
+                      state.categoryFilter ===
+                      cat
+                        ? '#00B398'
+                        : '#f2f2f2',
+                    color:
+                      state.categoryFilter ===
+                      cat
+                        ? '#fff'
+                        : '#444'
+                  }}
+                >
+                  {cat}
+                </div>
+              )
+            )}
           </div>
 
           <div
@@ -369,9 +492,12 @@ export default defineComponent({
           >
             <div
               ref={mapContainer}
-              onClick={collapseSheet}
+              onClick={
+                collapseSheet
+              }
               style={{
-                position: 'absolute',
+                position:
+                  'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%'
