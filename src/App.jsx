@@ -21,9 +21,9 @@ export default defineComponent({
           boxShadow: '0 24px 60px -24px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.06)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative'
         }}>
-          <div style={{ flexShrink: 0, padding: '16px 20px 12px', background: THEME.main, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>대전 놀거리</div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>{TITLES[route.name] || ''}</div>
+          <div style={{ flexShrink: 0, padding: '17px 22px 16px', background: THEME.main, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>어디 가유 🤔</div>
+            {/* <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>{TITLES[route.name] || ''}</div> */}
           </div>
 
           <RouterView />

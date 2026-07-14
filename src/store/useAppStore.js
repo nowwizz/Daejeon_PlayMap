@@ -10,15 +10,15 @@ const state = reactive({
   sortMode: 'latest',
   sortMenuOpen: false,
   posts: [
-    { id: 1, title: '한빛탑 야경 명당 아시는 분?', place: '한빛탑', content: '엑스포공원 쪽에서 사진찍기 좋은 자리 추천 부탁드려요!', password: '1234', date: '07.10', likes: 8, liked: false },
-    { id: 2, title: '유성온천 근처 맛집 추천', place: '유성온천', content: '온천하고 나서 갈만한 식당 있을까요', password: '0000', date: '07.08', likes: 3, liked: false }
+    { id: 1, title: '한빛탑 야경 명당 아시는 분?', place: '한빛탑', content: '엑스포공원 쪽에서 사진찍기 좋은 자리 추천 부탁드려요!', password: '1234', date: '07.10', likes: 8},
+    { id: 2, title: '유성온천 근처 맛집 추천', place: '유성온천', content: '온천하고 나서 갈만한 식당 있을까요', password: '0000', date: '07.08', likes: 3}
   ],
   nextPostId: 3,
   newPostOpen: false, newTitle: '', newPlace: '', newContent: '', newPassword: '',
   detailPostId: null, postActionType: null, actionPassword: '', actionError: false,
   editTitle: '', editPlace: '', editContent: '',
   chatMessages: [
-    { from: 'bot', text: '안녕하세요! 대전 놀거리 챗봇이에요. 어떤 곳을 찾고 계신가요? (예: 자연, 맛집, 온천, 가족)' }
+    { from: 'bot', text: '안녕하세요! 대전 놀거리 챗봇이에요.' }
   ],
   chatInput: ''
 })
@@ -60,8 +60,7 @@ function selectSort(mode) { state.sortMode = mode; state.sortMenuOpen = false }
 function toggleLike(id) {
   const post = state.posts.find(p => p.id === id)
   if (!post) return
-  post.liked = !post.liked
-  post.likes += post.liked ? 1 : -1
+  post.likes++
 }
 
 function toggleNewPost() {
@@ -73,7 +72,7 @@ function submitPost() {
   if (!state.newTitle.trim() || !state.newContent.trim() || !state.newPassword.trim()) return
   state.posts.unshift({
     id: state.nextPostId, title: state.newTitle, place: state.newPlace || '장소 미지정',
-    content: state.newContent, password: state.newPassword, date: '오늘', likes: 0, liked: false
+    content: state.newContent, password: state.newPassword, date: '오늘', likes: 0
   })
   state.nextPostId++
   toggleNewPost()

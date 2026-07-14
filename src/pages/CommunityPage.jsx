@@ -21,7 +21,7 @@ export default defineComponent({
                     <div style={{ fontSize: '12px', color: THEME.main, fontWeight: 600, marginTop: '2px' }}>{post.place}</div>
                   </div>
                   <div onClick={e => { e.stopPropagation(); toggleLike(post.id) }} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, cursor: 'pointer', transition: 'transform .15s ease' }}>
-                    <div style={{ fontSize: '14px', color: post.liked ? '#E23670' : '#ccc' }}>♥</div>
+                    <div style={{ fontSize: '14px', color: '#E23670'}}>♥</div>
                     <div style={{ fontSize: '12px', color: '#888' }}>{post.likes}</div>
                   </div>
                 </div>

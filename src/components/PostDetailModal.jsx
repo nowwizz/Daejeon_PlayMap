@@ -18,7 +18,7 @@ export default defineComponent({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
                 <div style={{ fontSize: '17px', fontWeight: 800 }}>{detailPost.value.title}</div>
                 <div onClick={() => toggleLike(detailPost.value.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, cursor: 'pointer' }}>
-                  <div style={{ fontSize: '16px', color: detailPost.value.liked ? '#E23670' : '#ccc' }}>♥</div>
+                  <div style={{ fontSize: '16px', color: '#E23670'}}>♥</div>
                   <div style={{ fontSize: '12px', color: '#888' }}>{detailPost.value.likes}</div>
                 </div>
               </div>
