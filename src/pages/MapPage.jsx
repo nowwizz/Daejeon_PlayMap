@@ -4,11 +4,19 @@ import { CATEGORIES } from '../theme.js'
 import SearchBar from '../components/SearchBar.jsx'
 import PlaceSheet from '../components/PlaceSheet.jsx'
 
+const CATEGORY_CONTENT_TYPE = {
+  전체: null,
+  관광지: '12',
+  여행코스: '25',
+  음식점: '39',
+  축제공연행사: '15'
+}
+
 export default defineComponent({
   name: 'MapPage',
 
   setup() {
-    const { state, openPlace, collapseSheet } = useAppStore()
+    const { state, collapseSheet } = useAppStore()
 
     const mapContainer = ref(null)
 
@@ -18,13 +26,11 @@ export default defineComponent({
 
     const loadKakaoMapScript = () => {
       return new Promise((resolve, reject) => {
-        // 이미 SDK가 로드된 경우
         if (window.kakao?.maps) {
           window.kakao.maps.load(resolve)
           return
         }
 
-        // 다른 컴포넌트에서 스크립트를 추가한 경우
         const existingScript = document.querySelector(
           'script[data-kakao-map-sdk]'
         )
@@ -33,23 +39,35 @@ export default defineComponent({
           existingScript.addEventListener('load', () => {
             window.kakao.maps.load(resolve)
           })
-          existingScript.addEventListener('error', reject)
+
+          existingScript.addEventListener(
+            'error',
+            reject
+          )
+
           return
         }
 
-        const appKey = import.meta.env.VITE_KAKAO_MAP_KEY
+        const appKey =
+          import.meta.env.VITE_KAKAO_MAP_KEY
 
         if (!appKey) {
-          reject(new Error('VITE_KAKAO_MAP_KEY가 설정되지 않았습니다.'))
+          reject(
+            new Error(
+              'VITE_KAKAO_MAP_KEY가 설정되지 않았습니다.'
+            )
+          )
           return
         }
 
-        const script = document.createElement('script')
+        const script =
+          document.createElement('script')
 
         script.dataset.kakaoMapSdk = 'true'
+
         script.src =
           `https://dapi.kakao.com/v2/maps/sdk.js` +
-          `?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}` +
+          `?appkey=${appKey}` +
           `&autoload=false` +
           `&libraries=clusterer`
 
@@ -58,7 +76,11 @@ export default defineComponent({
         }
 
         script.onerror = () => {
-          reject(new Error('카카오맵 SDK를 불러오지 못했습니다.'))
+          reject(
+            new Error(
+              '카카오맵 SDK를 불러오지 못했습니다.'
+            )
+          )
         }
 
         document.head.appendChild(script)
@@ -68,84 +90,179 @@ export default defineComponent({
     const createMap = () => {
       const kakao = window.kakao
 
-      // 대전광역시청 부근 좌표
-      const daejeonCenter = new kakao.maps.LatLng(
-        36.3504119,
-        127.3845475
+      const daejeonCenter =
+        new kakao.maps.LatLng(
+          36.3504119,
+          127.3845475
+        )
+
+      map = new kakao.maps.Map(
+        mapContainer.value,
+        {
+          center: daejeonCenter,
+          level: 8
+        }
       )
 
-      map = new kakao.maps.Map(mapContainer.value, {
-        center: daejeonCenter,
+      const bounds =
+        new kakao.maps.LatLngBounds()
 
-        // 숫자가 클수록 더 넓은 지역을 보여줌
-        level: 8
-      })
-
-      // 대전 전체가 들어오도록 대략적인 경계 설정
-      const bounds = new kakao.maps.LatLngBounds()
-
-      // 남서쪽
       bounds.extend(
-        new kakao.maps.LatLng(36.1833, 127.2464)
+        new kakao.maps.LatLng(
+          36.1833,
+          127.2464
+        )
       )
 
-      // 북동쪽
       bounds.extend(
-        new kakao.maps.LatLng(36.4908, 127.5597)
+        new kakao.maps.LatLng(
+          36.4908,
+          127.5597
+        )
       )
 
       map.setBounds(bounds)
 
-      // 지도 확대·축소 버튼
-      const zoomControl = new kakao.maps.ZoomControl()
+      const zoomControl =
+        new kakao.maps.ZoomControl()
 
       map.addControl(
         zoomControl,
         kakao.maps.ControlPosition.RIGHT
       )
 
-      // 부모 크기가 바뀌면 지도 크기도 재계산
-      resizeObserver = new ResizeObserver(() => {
-        if (!map || !mapContainer.value) return
+      resizeObserver =
+        new ResizeObserver(() => {
+          if (!map || !mapContainer.value) {
+            return
+          }
 
-        map.relayout()
-      })
+          map.relayout()
+        })
 
-      resizeObserver.observe(mapContainer.value)
+      resizeObserver.observe(
+        mapContainer.value
+      )
     }
 
-    const loadPlaces = async () => {
+    const loadAllPlaces = async () => {
       const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/v1/locations/all`
+        `${import.meta.env.VITE_API_BASE_URL}/locations/all`
       )
 
       if (!response.ok) {
-          throw new Error("장소 조회 실패")
+        throw new Error(
+          `전체 장소 조회 실패: ${response.status}`
+        )
       }
 
       return await response.json()
     }
 
-    const createPlaceClusters = (places) => {
-        const kakao = window.kakao
+    const loadCategoryPlaces = async (
+      contenttypeid
+    ) => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/locations` +
+          `?contenttypeid=${encodeURIComponent(
+            contenttypeid
+          )}`
+      )
 
-        const markers = places.map(place => {
-            return new kakao.maps.Marker({
-                position: new kakao.maps.LatLng(
-                    Number(place.mapy),
-                    Number(place.mapx)
-                ),
-                title: place.title
-            })
+      if (!response.ok) {
+        throw new Error(
+          `카테고리 장소 조회 실패: ${response.status}`
+        )
+      }
+
+      return await response.json()
+    }
+
+    const loadPlacesByCategory = async (
+      category
+    ) => {
+      const contenttypeid =
+        CATEGORY_CONTENT_TYPE[category]
+
+      if (contenttypeid === null) {
+        return await loadAllPlaces()
+      }
+
+      return await loadCategoryPlaces(
+        contenttypeid
+      )
+    }
+
+    const clearPlaceClusters = () => {
+      if (!clusterer) return
+
+      clusterer.clear()
+      clusterer.setMap(null)
+      clusterer = null
+    }
+
+    const createPlaceClusters = (places) => {
+      const kakao = window.kakao
+
+      clearPlaceClusters()
+
+      const markers = places
+        .filter((place) => {
+          const latitude =
+            Number(place.mapy)
+
+          const longitude =
+            Number(place.mapx)
+
+          return (
+            Number.isFinite(latitude) &&
+            Number.isFinite(longitude)
+          )
+        })
+        .map((place) => {
+          return new kakao.maps.Marker({
+            position:
+              new kakao.maps.LatLng(
+                Number(place.mapy),
+                Number(place.mapx)
+              ),
+            title: place.title
+          })
         })
 
-    clusterer = new kakao.maps.MarkerClusterer({
-        map,
-        markers,
-        averageCenter: true,
-        minLevel: 7
-    })
-}
+      clusterer =
+        new kakao.maps.MarkerClusterer({
+          map,
+          markers,
+          averageCenter: true,
+          minLevel: 7
+        })
+    }
+
+    const changeCategory = async (
+      category
+    ) => {
+      try {
+        state.categoryFilter = category
+
+        const places =
+          await loadPlacesByCategory(
+            category
+          )
+
+        createPlaceClusters(places)
+
+        console.log(
+          `[${category}] 장소 개수:`,
+          places.length
+        )
+      } catch (error) {
+        console.error(
+          `[${category}] 장소 조회 실패:`,
+          error
+        )
+      }
+    }
 
     onMounted(async () => {
       try {
@@ -153,16 +270,28 @@ export default defineComponent({
 
         createMap()
 
-        const places = await loadPlaces()
+        const places =
+          await loadAllPlaces()
+
+        state.categoryFilter = '전체'
 
         createPlaceClusters(places)
+
+        console.log(
+          '[전체] 장소 개수:',
+          places.length
+        )
       } catch (error) {
-        console.error('카카오맵 초기화 실패:', error)
+        console.error(
+          '카카오맵 초기화 실패:',
+          error
+        )
       }
     })
 
     onBeforeUnmount(() => {
       resizeObserver?.disconnect()
+      clearPlaceClusters()
     })
 
     return () => (
@@ -201,7 +330,7 @@ export default defineComponent({
               <div
                 key={cat}
                 onClick={() => {
-                  state.categoryFilter = cat
+                  changeCategory(cat)
                 }}
                 style={{
                   padding: '8px 14px',
@@ -211,7 +340,8 @@ export default defineComponent({
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  transition: 'background .2s ease, color .2s ease',
+                  transition:
+                    'background .2s ease, color .2s ease',
                   background:
                     state.categoryFilter === cat
                       ? '#00B398'
@@ -237,7 +367,6 @@ export default defineComponent({
               overflow: 'hidden'
             }}
           >
-            {/* 실제 카카오맵이 들어가는 영역 */}
             <div
               ref={mapContainer}
               onClick={collapseSheet}
