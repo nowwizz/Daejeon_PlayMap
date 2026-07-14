@@ -14,6 +14,7 @@ export default defineComponent({
 
     let map = null
     let resizeObserver = null
+    let clusterer = null
 
     const loadKakaoMapScript = () => {
       return new Promise((resolve, reject) => {
@@ -80,21 +81,6 @@ export default defineComponent({
         level: 8
       })
 
-      const testPlace = {
-        title: "성심당 본점",
-        mapy: 36.3277,
-        mapx: 127.4275
-      }
-
-      new kakao.maps.Marker({
-          map: map,
-          position: new kakao.maps.LatLng(
-              testPlace.mapy,
-              testPlace.mapx
-          ),
-          title: testPlace.title
-      })
-
       // 대전 전체가 들어오도록 대략적인 경계 설정
       const bounds = new kakao.maps.LatLngBounds()
 
@@ -128,10 +114,48 @@ export default defineComponent({
       resizeObserver.observe(mapContainer.value)
     }
 
+    const loadPlaces = async () => {
+      const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/v1/locations/all`
+      )
+
+      if (!response.ok) {
+          throw new Error("장소 조회 실패")
+      }
+
+      return await response.json()
+    }
+
+    const createPlaceClusters = (places) => {
+        const kakao = window.kakao
+
+        const markers = places.map(place => {
+            return new kakao.maps.Marker({
+                position: new kakao.maps.LatLng(
+                    Number(place.mapy),
+                    Number(place.mapx)
+                ),
+                title: place.title
+            })
+        })
+
+    clusterer = new kakao.maps.MarkerClusterer({
+        map,
+        markers,
+        averageCenter: true,
+        minLevel: 7
+    })
+}
+
     onMounted(async () => {
       try {
         await loadKakaoMapScript()
+
         createMap()
+
+        const places = await loadPlaces()
+
+        createPlaceClusters(places)
       } catch (error) {
         console.error('카카오맵 초기화 실패:', error)
       }
