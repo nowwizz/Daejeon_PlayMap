@@ -10,15 +10,22 @@ export default defineComponent({
     const route = useRoute()
     const { toggleChat, toggleNewPost } = useAppStore()
     const aiHover = ref(false)
+    const writeHover = ref(false)
     
     return () => (
       <div style={{ position: 'absolute', right: '16px', bottom: '78px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', zIndex: 15 }}>
         {route.name === 'community' && (
-          <div onClick={toggleNewPost} style={{
-            width: '50px', height: '50px', borderRadius: '50%', background: THEME.main, color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', fontWeight: 800,
-            cursor: 'pointer', boxShadow: '0 8px 20px -6px rgba(0,0,0,0.5)', transition: 'transform .15s ease'
-          }}>✎</div>
+          <div
+            onClick={toggleNewPost}
+            onMouseenter={() => writeHover.value = true}
+            onMouseleave={() => writeHover.value = false}
+            style={{
+              width: '50px', height: '50px', borderRadius: '50%', background: THEME.main, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', fontWeight: 800,
+              cursor: 'pointer', boxShadow: '0 8px 20px -6px rgba(0,0,0,0.5)', transition: 'transform .15s ease',
+              transform: writeHover.value ? 'scale(1.08)' : 'scale(1)'
+            }}
+          >✎</div>
         )}
         <div
           onClick={toggleChat}

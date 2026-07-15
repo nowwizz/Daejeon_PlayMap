@@ -1,5 +1,8 @@
 import { reactive, computed } from 'vue'
 import { PLACES } from '../data/places.js'
+import { POST_CATEGORIES, postCatStyle } from '../theme.js'
+
+const API_BASE_URL = 'http://localhost:8000'
 
 const state = reactive({
   searchQuery: '',
@@ -9,12 +12,9 @@ const state = reactive({
   chatOpen: false,
   sortMode: 'latest',
   sortMenuOpen: false,
-  posts: [
-    { id: 1, title: '한빛탑 야경 명당 아시는 분?', place: '한빛탑', content: '엑스포공원 쪽에서 사진찍기 좋은 자리 추천 부탁드려요!', password: '1234', date: '07.10', likes: 8},
-    { id: 2, title: '유성온천 근처 맛집 추천', place: '유성온천', content: '온천하고 나서 갈만한 식당 있을까요', password: '0000', date: '07.08', likes: 3}
-  ],
+  posts: [],
   nextPostId: 3,
-  newPostOpen: false, newTitle: '', newPlace: '', newContent: '', newPassword: '',
+  newPostOpen: false, newTitle: '', newPlace: '', newContent: '', newPassword: '', newCategory: '',
   detailPostId: null, postActionType: null, actionPassword: '', actionError: false,
   editTitle: '', editPlace: '', editContent: '',
   chatMessages: [
@@ -49,13 +49,53 @@ const visiblePosts = computed(() => {
 
 const detailPost = computed(() => state.posts.find(p => p.id === state.detailPostId) || null)
 
+function mapPostFromApi(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    place: item.place,
+    category: item.category,
+    content: item.content,
+    password: '',
+    date: item.created_at,
+    likes: item.like_count ?? 0,
+    views: item.view_count ?? 0,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at
+  }
+}
+
+async function fetchPosts() {
+  try {
+    const params = new URLSearchParams()
+    if (state.categoryFilter !== '전체') params.append('category', state.categoryFilter)
+    if (state.searchQuery) params.append('q', state.searchQuery)
+    if (state.sortMode === 'popular') params.append('sort_by', 'likes')
+    if (state.sortMode === 'views') params.append('sort_by', 'views')
+    params.append('limit', '50')
+
+    const response = await fetch(`${API_BASE_URL}/posts?${params.toString()}`)
+    if (!response.ok) throw new Error('게시글을 불러오지 못했습니다.')
+
+    const data = await response.json()
+    state.posts = Array.isArray(data) ? data.map(mapPostFromApi) : []
+  } catch (error) {
+    console.error(error)
+    state.posts = []
+  }
+}
+
 function openPlace(id) { state.selectedPlaceId = id }
 function closePlace() { state.selectedPlaceId = null }
 function toggleSheet() { state.sheetExpanded = !state.sheetExpanded }
 function collapseSheet() { state.sheetExpanded = false }
 function toggleChat() { state.chatOpen = !state.chatOpen }
 function toggleSortMenu() { state.sortMenuOpen = !state.sortMenuOpen }
-function selectSort(mode) { state.sortMode = mode; state.sortMenuOpen = false }
+function selectSort(mode) {
+  state.sortMode = mode
+  state.sortMenuOpen = false
+  fetchPosts()
+}
 
 function toggleLike(id) {
   const post = state.posts.find(p => p.id === id)
@@ -63,22 +103,66 @@ function toggleLike(id) {
   post.likes++
 }
 
+function setCategoryFilter(category) {
+  state.categoryFilter = category
+  fetchPosts()
+}
+
+function loadPosts() {
+  fetchPosts()
+}
+
 function toggleNewPost() {
   state.newPostOpen = !state.newPostOpen
-  state.newTitle = ''; state.newPlace = ''; state.newContent = ''; state.newPassword = ''
+  state.newTitle = ''; state.newPlace = ''; state.newContent = ''; state.newPassword = ''; state.newCategory = ''
 }
 
 function submitPost() {
   if (!state.newTitle.trim() || !state.newContent.trim() || !state.newPassword.trim()) return
   state.posts.unshift({
     id: state.nextPostId, title: state.newTitle, place: state.newPlace || '장소 미지정',
-    content: state.newContent, password: state.newPassword, date: '오늘', likes: 0
+    category: state.newCategory || '자유', content: state.newContent, password: state.newPassword, date: '오늘', likes: 0
   })
   state.nextPostId++
   toggleNewPost()
 }
 
-function openDetail(id) { state.detailPostId = id; state.postActionType = null; state.actionPassword = ''; state.actionError = false }
+async function openDetail(id) {
+  state.detailPostId = id
+  state.postActionType = null
+  state.actionPassword = ''
+  state.actionError = false
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}`)
+    if (!response.ok) throw new Error('게시글 상세 정보를 불러오지 못했습니다.')
+
+    const item = await response.json()
+    const mapped = mapPostFromApi(item)
+    const current = state.posts.find(p => p.id === id)
+
+    if (current) {
+      Object.assign(current, mapped)
+      state.posts = [...state.posts]
+    } else {
+      state.posts = [mapped, ...state.posts]
+    }
+
+    const detail = state.posts.find(p => p.id === id)
+    if (detail) {
+      detail.views = mapped.views
+      detail.content = mapped.content
+      detail.likes = mapped.likes
+      detail.date = mapped.date
+      detail.category = mapped.category
+      detail.place = mapped.place
+      detail.title = mapped.title
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 function closeDetail() { state.detailPostId = null; state.postActionType = null }
 
 function startEdit() {
@@ -132,6 +216,6 @@ export function useAppStore() {
     openPlace, closePlace, toggleSheet, collapseSheet, toggleChat,
     toggleSortMenu, selectSort, toggleLike, toggleNewPost, submitPost,
     openDetail, closeDetail, startEdit, startDelete, cancelAction, confirmEdit, confirmDelete,
-    sendChat
+    sendChat, fetchPosts, loadPosts, setCategoryFilter
   }
 }

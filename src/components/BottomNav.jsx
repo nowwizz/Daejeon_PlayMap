@@ -16,9 +16,10 @@ export default defineComponent({
           return (
             <div key={item.key} onClick={() => router.push(`/${item.key}`)} style={{
               flex: 1, textAlign: 'center', padding: '24px 0 20px', fontSize: '12.5px', cursor: 'pointer',
-              transition: 'color .2s ease, border-color .2s ease',
+              transition: 'color .2s ease, background-color .2s ease, border-color .2s ease',
               color: active ? THEME.main : '#888', fontWeight: active ? 700 : 500,
-              borderTop: active ? `2px solid ${THEME.main}` : '2px solid transparent'
+              borderTop: active ? `2px solid ${THEME.main}` : '2px solid transparent',
+              background: active ? '#E1F6F1' : 'transparent'
             }}>{item.label}</div>
           )
         })}
