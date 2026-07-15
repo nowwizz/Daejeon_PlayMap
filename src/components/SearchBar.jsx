@@ -66,9 +66,11 @@ export default defineComponent({
                 }}
                 style={{
                   minWidth: "80px",
-                  padding: "11px 7px 10px 10px",
+                  padding: "12px 7px 12px 10px",
                   borderRadius: "11px",
-                  border: sortFocused.value ? "1px solid #00B398" : "1px solid #e5e5e5",
+                  border: sortFocused.value
+                    ? "1px solid #00B398"
+                    : "1px solid #e5e5e5",
                   background: "#fff",
                   fontSize: "12.5px",
                   fontWeight: 600,
