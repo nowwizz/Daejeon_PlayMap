@@ -54,6 +54,7 @@ export default defineComponent({
     } = useAppStore()
 
     const mapContainer = ref(null)
+    const allPlaces = ref([])
 
     let map = null
     let resizeObserver = null
@@ -349,6 +350,103 @@ export default defineComponent({
       )
     }
 
+    const moveMapToPlace = (
+      place
+    ) => {
+      if (!map) {
+        return
+      }
+
+      const latitude =
+        Number(place.mapy)
+
+      const longitude =
+        Number(place.mapx)
+
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude)
+      ) {
+        console.error(
+          '장소 좌표가 올바르지 않습니다.',
+          place
+        )
+        return
+      }
+
+      const position =
+        new window.kakao.maps.LatLng(
+          latitude,
+          longitude
+        )
+
+      map.setLevel(3)
+      map.panTo(position)
+    }
+
+    const searchPlace = (
+      keyword
+    ) => {
+      const trimmedKeyword =
+        keyword.trim().toLowerCase()
+
+      if (!trimmedKeyword) {
+        console.warn(
+          '검색어를 입력해주세요.'
+        )
+        return
+      }
+
+      const foundPlace =
+        allPlaces.value.find(
+          (place) => {
+            const title =
+              String(
+                place.title ?? ''
+              ).toLowerCase()
+
+            const addr1 =
+              String(
+                place.addr1 ?? ''
+              ).toLowerCase()
+
+            const addr2 =
+              String(
+                place.addr2 ?? ''
+              ).toLowerCase()
+
+            return (
+              title.includes(
+                trimmedKeyword
+              ) ||
+              addr1.includes(
+                trimmedKeyword
+              ) ||
+              addr2.includes(
+                trimmedKeyword
+              )
+            )
+          }
+        )
+
+      if (!foundPlace) {
+        console.warn(
+          '검색 결과가 없습니다:',
+          keyword
+        )
+        return
+      }
+
+      moveMapToPlace(
+        foundPlace
+      )
+
+      console.log(
+        '검색된 장소:',
+        foundPlace
+      )
+    }
+
     const changeCategory = async (
       category
     ) => {
@@ -385,6 +483,8 @@ export default defineComponent({
 
         const places =
           await loadAllPlaces()
+        
+          allPlaces.value = places
 
         state.categoryFilter =
           '전체'
@@ -421,7 +521,9 @@ export default defineComponent({
           overflow: 'hidden'
         }}
       >
-        <SearchBar />
+        <SearchBar 
+          onSearch={searchPlace}
+        />
 
         <div
           style={{

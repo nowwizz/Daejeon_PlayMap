@@ -4,7 +4,14 @@ import { useAppStore } from '../store/useAppStore.js'
 
 export default defineComponent({
   name: 'SearchBar',
-  setup() {
+
+  props: {
+    onSearch: {
+      type: Function,
+      default: null
+    }
+  },
+  setup(props) {
     const route = useRoute()
     const { state, toggleSortMenu, selectSort } = useAppStore()
     return () => (
@@ -15,6 +22,30 @@ export default defineComponent({
           placeholder={route.name === 'map' ? '놀거리, 지역 검색' : '게시글 검색'}
           style={{ flex: 1, padding: '11px 14px', borderRadius: '11px', border: '1px solid #e5e5e5', background: '#f7f7f7', fontSize: '14px', outline: 'none' }}
         />
+        {route.name === 'map' && (
+          <button
+            type="button"
+            onClick={() => {
+              props.onSearch?.(
+                state.searchQuery
+              )
+            }}
+            style={{
+              padding: '0 16px',
+              border: 'none',
+              borderRadius: '11px',
+              background: '#00B398',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}
+          >
+            검색
+          </button>
+        )}
         {route.name === 'community' && (
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div onClick={toggleSortMenu} style={{ padding: '11px 12px', borderRadius: '11px', border: '1px solid #e5e5e5', background: '#fff', fontSize: '12.5px', fontWeight: 600, color: '#555', cursor: 'pointer', whiteSpace: 'nowrap' }}>
