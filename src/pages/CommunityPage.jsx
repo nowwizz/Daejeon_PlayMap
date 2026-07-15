@@ -1,4 +1,11 @@
-import { defineComponent, onMounted } from "vue";
+import {
+  defineComponent,
+  onMounted,
+  onBeforeUnmount,
+  ref,
+  computed,
+  Transition,
+} from "vue";
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME, postCatStyle } from "../theme.js";
 import SearchBar from "../components/SearchBar.jsx";
@@ -14,10 +21,49 @@ export default defineComponent({
       loadPosts,
       toggleSortMenu,
       selectSort,
+      loadAllLocations,
     } = useAppStore();
+
+    const topPosts = computed(() =>
+      [...state.posts]
+        .sort((a, b) => b.likes - a.likes || b.views - a.views)
+        .slice(0, 5),
+    );
+
+    const tickerIndex = ref(0);
+    const expanded = ref(false);
+    let tickerTimer = null;
+
+    const stopTicker = () => {
+      if (tickerTimer) {
+        clearInterval(tickerTimer);
+        tickerTimer = null;
+      }
+    };
+    const startTicker = () => {
+      stopTicker();
+      tickerTimer = setInterval(() => {
+        if (topPosts.value.length === 0) return;
+        tickerIndex.value = (tickerIndex.value + 1) % topPosts.value.length;
+      }, 2500);
+    };
+    const toggleExpanded = () => {
+      expanded.value = !expanded.value;
+      if (expanded.value) {
+        stopTicker();
+      } else {
+        tickerIndex.value = 0;
+        startTicker();
+      }
+    };
 
     onMounted(() => {
       loadPosts();
+      loadAllLocations();
+      startTicker();
+    });
+    onBeforeUnmount(() => {
+      stopTicker();
     });
 
     return () => (
@@ -114,6 +160,195 @@ export default defineComponent({
               )}
             </div>
           </div>
+
+          {topPosts.value.length > 0 && (
+            <div
+              style={{
+                border: "1px solid rgb(240, 170, 170)",
+                borderRadius: "14px",
+                background: "#ffdddd",
+                marginBottom: "12px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    color: THEME.main,
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                    padding: "0 0 1px 0",
+                  }}
+                >
+                  🔥 오늘의 인기글
+                </div>
+                {!expanded.value && (
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      height: "18px",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Transition name="ticker">
+                      <div
+                        key={
+                          topPosts.value[
+                            tickerIndex.value % topPosts.value.length
+                          ].id
+                        }
+                        onClick={() =>
+                          openDetail(
+                            topPosts.value[
+                              tickerIndex.value % topPosts.value.length
+                            ].id,
+                          )
+                        }
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            minWidth: 0,
+                          }}
+                        >
+                          {
+                            topPosts.value[
+                              tickerIndex.value % topPosts.value.length
+                            ].title
+                          }
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 500,
+                            padding: "2px 7px",
+                            borderRadius: "6px",
+                            flexShrink: 0,
+                            background: postCatStyle(
+                              topPosts.value[
+                                tickerIndex.value % topPosts.value.length
+                              ].category,
+                            ).bg,
+                            color: postCatStyle(
+                              topPosts.value[
+                                tickerIndex.value % topPosts.value.length
+                              ].category,
+                            ).fg,
+                          }}
+                        >
+                          {
+                            topPosts.value[
+                              tickerIndex.value % topPosts.value.length
+                            ].category
+                          }
+                        </span>
+                      </div>
+                    </Transition>
+                  </div>
+                )}
+                <div
+                  onClick={toggleExpanded}
+                  style={{
+                    flexShrink: 0,
+                    width: "24px",
+                    height: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    fontSize: "20px",
+                    color: "#b37f7f",
+                    marginLeft: "auto",
+                    transition: "transform .2s ease",
+                    transform: expanded.value
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
+                  }}
+                >
+                  ▾
+                </div>
+              </div>
+              {expanded.value && (
+                <div>
+                  {topPosts.value.map((post, i) => (
+                    <div
+                      key={post.id}
+                      onClick={() => openDetail(post.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "3px 12px 9px 12px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 800,
+                          color: "#ccc",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          fontSize: "12.5px",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {post.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "10.5px",
+                          fontWeight: 500,
+                          padding: "2px 7px",
+                          borderRadius: "6px",
+                          flexShrink: 0,
+                          background: postCatStyle(post.category).bg,
+                          color: postCatStyle(post.category).fg,
+                        }}
+                      >
+                        {post.category}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
@@ -122,10 +357,9 @@ export default defineComponent({
                 key={post.id}
                 onClick={() => openDetail(post.id)}
                 style={{
-                  border: "1px solid #eee",
                   borderRadius: "14px",
                   padding: "14px",
-                  background: "#fff",
+                  background: "#9cd1c93a",
                   cursor: "pointer",
                   transition: "transform .16s ease, box-shadow .16s ease",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.04)",

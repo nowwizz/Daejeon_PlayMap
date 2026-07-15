@@ -1,4 +1,5 @@
-import { defineComponent } from "vue";
+import { defineComponent, computed, onMounted, onBeforeUnmount, ref } from "vue";
+import { useRouter } from "vue-router";
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME, POST_CATEGORIES, postCatStyle } from "../theme.js";
 
@@ -26,7 +27,49 @@ export default defineComponent({
       cancelAction,
       confirmEdit,
       confirmDelete,
+      findLocationByContentId,
+      setEditPlace,
     } = useAppStore();
+    const router = useRouter();
+    const showEditSuggestions = ref(false);
+    const editPlaceFieldRef = ref(null);
+
+    const handleDocumentMouseDown = (e) => {
+      if (
+        editPlaceFieldRef.value &&
+        !editPlaceFieldRef.value.contains(e.target)
+      ) {
+        showEditSuggestions.value = false;
+      }
+    };
+
+    onMounted(() => {
+      document.addEventListener("mousedown", handleDocumentMouseDown);
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener("mousedown", handleDocumentMouseDown);
+    });
+
+    const placeLocation = computed(() =>
+      findLocationByContentId(detailPost.value?.contentid),
+    );
+
+    const goToPlaceOnMap = () => {
+      const contentid = detailPost.value?.contentid;
+      if (!contentid) return;
+      closeDetail();
+      router.push({ name: "map", query: { place: contentid } });
+    };
+
+    const editSuggestions = computed(() => {
+      const q = state.editPlace.trim();
+      if (!q || state.editPlaceContentId) return [];
+      return state.allLocations
+        .filter((loc) => loc.title.includes(q))
+        .slice(0, 6);
+    });
+
     return () =>
       detailPost.value && (
         <div
@@ -137,6 +180,64 @@ export default defineComponent({
                 >
                   {detailPost.value.place}
                 </div>
+                {placeLocation.value && (
+                  <div
+                    onClick={goToPlaceOnMap}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      border: "1px solid #eee",
+                      borderRadius: "12px",
+                      padding: "8px",
+                      marginBottom: "14px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {placeLocation.value.firstimage ? (
+                      <img
+                        src={placeLocation.value.firstimage}
+                        alt={placeLocation.value.title}
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "8px",
+                          objectFit: "cover",
+                          flexShrink: 0,
+                          background: "#f2f2f2",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "8px",
+                          flexShrink: 0,
+                          background: "#f2f2f2",
+                        }}
+                      />
+                    )}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "13px", fontWeight: 700 }}>
+                        {placeLocation.value.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#888",
+                          marginTop: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {placeLocation.value.addr1} {placeLocation.value.addr2}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#bbb" }}>›</div>
+                  </div>
+                )}
                 <div
                   style={{
                     fontSize: "14px",
@@ -246,14 +347,74 @@ export default defineComponent({
                     placeholder="제목"
                     style={inputStyle}
                   />
-                  <input
-                    value={state.editPlace}
-                    onInput={(e) => {
-                      state.editPlace = e.target.value;
-                    }}
-                    placeholder="장소"
-                    style={inputStyle}
-                  />
+                  <div ref={editPlaceFieldRef} style={{ position: "relative" }}>
+                    <input
+                      value={state.editPlace}
+                      onInput={(e) => {
+                        state.editPlace = e.target.value;
+                        state.editPlaceContentId = null;
+                        showEditSuggestions.value = true;
+                      }}
+                      onFocus={() => {
+                        showEditSuggestions.value = true;
+                      }}
+                      placeholder="장소 (놀거리 검색)"
+                      autoComplete="off"
+                      style={inputStyle}
+                    />
+                    {showEditSuggestions.value &&
+                      editSuggestions.value.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 4px)",
+                            left: 0,
+                            right: 0,
+                            background: "#fff",
+                            border: "1px solid #e5e5e5",
+                            borderRadius: "10px",
+                            boxShadow: "0 8px 20px -8px rgba(0,0,0,0.25)",
+                            overflow: "hidden",
+                            zIndex: 5,
+                            animation: "popIn .15s ease",
+                            transformOrigin: "top",
+                          }}
+                        >
+                          {editSuggestions.value.map((loc, index) => (
+                            <div
+                              key={loc.contentid}
+                              onClick={() => {
+                                setEditPlace(loc);
+                                showEditSuggestions.value = false;
+                              }}
+                              style={{
+                                padding: "9px 12px",
+                                cursor: "pointer",
+                                borderTop:
+                                  index > 0 ? "1px solid #eee" : "none",
+                              }}
+                            >
+                              <div
+                                style={{ fontSize: "12.5px", fontWeight: 700 }}
+                              >
+                                {loc.title}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#999",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {loc.addr1} {loc.addr2}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                  </div>
                   <select
                     value={state.editCategory}
                     onChange={(e) => {

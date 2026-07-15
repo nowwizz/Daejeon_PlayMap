@@ -64,6 +64,21 @@ body,
     opacity: 1;
   }
 }
+.ticker-enter-active,
+.ticker-leave-active {
+  transition:
+    transform 0.4s ease,
+    opacity 0.4s ease;
+}
+.ticker-enter-from {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+.ticker-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
 /* Keep default cluster marker style and only change number font. */
 .cluster,
 .cluster * {

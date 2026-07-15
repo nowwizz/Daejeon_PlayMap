@@ -38,17 +38,17 @@ export default defineComponent({
             onInput={(e) => {
               state.searchQuery = e.target.value;
             }}
-            onKeydown={(e) => {
-              if (route.name === "map" && e.key === "Enter") {
-                e.preventDefault();
-                props.onSearch?.(state.searchQuery);
-              }
-            }}
             placeholder={
               route.name === "map" ? "놀거리, 지역 검색" : "게시글 검색"
             }
             onKeydown={(e) => {
-              if (e.key === "Enter") runSearch();
+              if (e.key !== "Enter") return;
+              if (route.name === "map") {
+                e.preventDefault();
+                props.onSearch?.(state.searchQuery);
+              } else if (route.name === "community") {
+                runSearch();
+              }
             }}
             style={{
               flex: 1,
@@ -79,19 +79,24 @@ export default defineComponent({
                 props.onSearch?.(state.searchQuery);
               }}
               style={{
-                padding: "0 16px",
-                border: "none",
-                borderRadius: "11px",
-                background: "#00B398",
-                color: "#fff",
-                fontSize: "13px",
-                fontWeight: 700,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
                 flexShrink: 0,
+                width: "44px",
+                borderRadius: "12px",
+                background: THEME.main,
+                color: "#fff",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
-              검색
+              <img
+                src="/src/assets/search.png"
+                alt=""
+                style={{ width: "30px", padding: "3px 0 0 0" }}
+              />
             </button>
           )}
           {route.name === "community" && (
