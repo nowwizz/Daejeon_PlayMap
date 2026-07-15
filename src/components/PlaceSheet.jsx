@@ -90,11 +90,11 @@ export default defineComponent({
         return true
       }
 
-      if (isLeportsDetail(detail) && ['accomcountleports', 'expagerangeleports', 'expagerangeleprots', 'chkcreditcardleports'].includes(normalizedKey)) {
+      if (isLeportsDetail(detail) && ['accomcountleports', 'expagerangeleports', 'expagerangeleprots', 'chkcreditcardleports', 'parkingfeeleports'].includes(normalizedKey)) {
         return true
       }
 
-      if (isFestivalDetail(detail) && ['sponsor1', 'sponsor1tel', 'sponser1tel', 'sponsor2', 'eventplace', 'program', 'progresstype'].includes(normalizedKey)) {
+      if (isFestivalDetail(detail) && ['sponsor1', 'sponsor1tel', 'sponser1tel', 'sponsor2', 'eventplace', 'program', 'progresstype', 'festivaltype'].includes(normalizedKey)) {
         return true
       }
 
@@ -256,8 +256,11 @@ export default defineComponent({
 
               {state.selectedPlaceDetail.tel && (
                 <div style={{ marginTop: '12px', fontSize: '13px' }}>
-                  <div><strong>{isFestivalDetail(state.selectedPlaceDetail) ? '📞' : '연락처'}</strong></div>
-                  <div style={{ marginTop: '4px' }}>{state.selectedPlaceDetail.tel}</div>
+                  <div>
+                    <strong>{isFestivalDetail(state.selectedPlaceDetail) ? '📞' : '연락처'}</strong>
+                    {' '}
+                    {state.selectedPlaceDetail.tel}
+                  </div>
                 </div>
               )}
 
