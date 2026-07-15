@@ -5,7 +5,15 @@ import { THEME, POST_CATEGORIES, postCatStyle } from "../theme.js";
 
 export default defineComponent({
   name: "SearchBar",
-  setup() {
+
+  props: {
+    onSearch: {
+      type: Function,
+      default: null,
+    },
+  },
+
+  setup(props) {
     const route = useRoute();
     const { state, loadPosts, setCategoryFilter } = useAppStore();
 
@@ -29,6 +37,12 @@ export default defineComponent({
             value={state.searchQuery}
             onInput={(e) => {
               state.searchQuery = e.target.value;
+            }}
+            onKeydown={(e) => {
+              if (route.name === "map" && e.key === "Enter") {
+                e.preventDefault();
+                props.onSearch?.(state.searchQuery);
+              }
             }}
             placeholder={
               route.name === "map" ? "놀거리, 지역 검색" : "게시글 검색"
@@ -58,6 +72,28 @@ export default defineComponent({
               e.target.style.backgroundColor = "#f7f7f7";
             }}
           />
+          {route.name === "map" && (
+            <button
+              type="button"
+              onClick={() => {
+                props.onSearch?.(state.searchQuery);
+              }}
+              style={{
+                padding: "0 16px",
+                border: "none",
+                borderRadius: "11px",
+                background: "#00B398",
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              검색
+            </button>
+          )}
           {route.name === "community" && (
             <div
               onClick={runSearch}

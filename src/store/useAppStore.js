@@ -66,6 +66,8 @@ const state = reactive({
   searchQuery: "",
   categoryFilter: "전체",
   selectedPlaceId: null,
+  selectedPlaceDetail: null,
+  selectedNeighborPlace: null,
   sheetExpanded: false,
   chatOpen: false,
   sortMode: "latest",
@@ -179,6 +181,16 @@ function openPlace(id) {
 }
 function closePlace() {
   state.selectedPlaceId = null;
+}
+function openPlaceDetail(place) {
+  state.selectedPlaceDetail = place;
+  state.sheetExpanded = true;
+}
+function closePlaceDetail() {
+  state.selectedPlaceDetail = null;
+}
+function openPlaceFromNeighbor(contentid) {
+  state.selectedNeighborPlace = contentid;
 }
 function toggleSheet() {
   state.sheetExpanded = !state.sheetExpanded;
@@ -510,6 +522,9 @@ export function useAppStore() {
     detailPost,
     openPlace,
     closePlace,
+    openPlaceDetail,
+    closePlaceDetail,
+    openPlaceFromNeighbor,
     toggleSheet,
     collapseSheet,
     toggleChat,

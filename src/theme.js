@@ -27,6 +27,16 @@ export function catStyle(cat) {
       return { bg: THEME.subLight, fg: THEME.subDeep, dot: THEME.subDeep };
     default:
       return { bg: "#eeeeee", fg: "#666666", dot: "#bbbbbb" };
+export const CATEGORIES = ['전체', '관광지', '음식점', '축제', '숙박']
+
+export function catStyle(cat) {
+  switch (cat) {
+    case '관광지': return { bg: '#FFEAD5', fg: '#C2600A', dot: '#E08A2E' }
+    case '여행코스': return { bg: THEME.mainLight, fg: THEME.main, dot: THEME.main }
+    case '음식점': return { bg: '#FDE2E9', fg: '#C2447A', dot: '#E27DA0' }
+    case '축제': return { bg: THEME.subLight, fg: THEME.subDeep, dot: THEME.subDeep }
+    case '숙박': return { bg: '#E6EDFF', fg: '#2E4FAE', dot: '#5F7BD4' }
+    default: return { bg: '#eeeeee', fg: '#666666', dot: '#bbbbbb' }
   }
 }
 export const POST_CATEGORIES = ["자유", "여행 후기", "맛집 추천", "축제 정보"];
