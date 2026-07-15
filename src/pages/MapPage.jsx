@@ -47,9 +47,10 @@ export default defineComponent({
   name: 'MapPage',
 
   setup() {
+    
     const {
       state,
-      openPlace,
+      openPlaceDetail,
       collapseSheet
     } = useAppStore()
 
@@ -220,6 +221,24 @@ export default defineComponent({
 
       return await response.json()
     }
+    const loadPlaceDetail = async (
+      contentid
+    ) => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}` +
+          `/locations/${encodeURIComponent(
+            contentid
+          )}`
+      )
+
+      if (!response.ok) {
+        throw new Error(
+          `장소 상세 조회 실패: ${response.status}`
+        )
+      }
+
+      return await response.json()
+    }
 
     const loadPlacesByCategory = async (
       category
@@ -273,15 +292,43 @@ export default defineComponent({
               place.contenttypeid
             )
 
-          return new kakao.maps.Marker({
-            position:
-              new kakao.maps.LatLng(
-                Number(place.mapy),
-                Number(place.mapx)
-              ),
-            title: place.title,
-            image: markerImage
-          })
+          const marker =
+            new kakao.maps.Marker({
+              position:
+                new kakao.maps.LatLng(
+                  Number(place.mapy),
+                  Number(place.mapx)
+                ),
+              title: place.title,
+              image: markerImage
+            })
+
+          kakao.maps.event.addListener(
+            marker,
+            'click',
+            async () => {
+              try {
+                const detail =
+                  await loadPlaceDetail(
+                    place.contentid
+                  )
+
+                openPlaceDetail(detail)
+
+                console.log(
+                  '상세정보 조회 성공:',
+                  detail
+                )
+              } catch (error) {
+                console.error(
+                  '장소 상세 조회 실패:',
+                  error
+                )
+              }
+            }
+          )
+
+          return marker
         })
 
       clusterer =
@@ -595,15 +642,14 @@ export default defineComponent({
           >
             <div
               ref={mapContainer}
-              onClick={
-                collapseSheet
-              }
+              
               style={{
                 position:
                   'absolute',
                 inset: 0,
                 width: '100%',
-                height: '100%'
+                height: '100%',
+                zIndex: 1
               }}
             />
 

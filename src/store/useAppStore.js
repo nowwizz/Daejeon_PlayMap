@@ -5,6 +5,7 @@ const state = reactive({
   searchQuery: '',
   categoryFilter: '전체',
   selectedPlaceId: null,
+  selectedPlaceDetail: null,
   sheetExpanded: false,
   chatOpen: false,
   sortMode: 'latest',
@@ -51,6 +52,8 @@ const detailPost = computed(() => state.posts.find(p => p.id === state.detailPos
 
 function openPlace(id) { state.selectedPlaceId = id }
 function closePlace() { state.selectedPlaceId = null }
+function openPlaceDetail(place) { state.selectedPlaceDetail = place; state.sheetExpanded = true }
+function closePlaceDetail() { state.selectedPlaceDetail = null}
 function toggleSheet() { state.sheetExpanded = !state.sheetExpanded }
 function collapseSheet() { state.sheetExpanded = false }
 function toggleChat() { state.chatOpen = !state.chatOpen }
@@ -130,7 +133,7 @@ function sendChat() {
 export function useAppStore() {
   return {
     state, selectedPlace, nearbyPlaces, filteredPlaces, visiblePosts, detailPost,
-    openPlace, closePlace, toggleSheet, collapseSheet, toggleChat,
+    openPlace, closePlace, openPlaceDetail, closePlaceDetail, toggleSheet, collapseSheet, toggleChat,
     toggleSortMenu, selectSort, toggleLike, toggleNewPost, submitPost,
     openDetail, closeDetail, startEdit, startDelete, cancelAction, confirmEdit, confirmDelete,
     sendChat
