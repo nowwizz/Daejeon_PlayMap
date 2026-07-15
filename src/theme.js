@@ -7,7 +7,7 @@ export const THEME = {
   subDeep: '#8A6A00'
 }
 
-export const CATEGORIES = ['전체', '관광지', '여행코스', '음식점', '축제', '숙박']
+export const CATEGORIES = ['전체', '관광지', '음식점', '축제', '숙박']
 
 export function catStyle(cat) {
   switch (cat) {

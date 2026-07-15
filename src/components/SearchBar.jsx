@@ -19,6 +19,12 @@ export default defineComponent({
         <input
           value={state.searchQuery}
           onInput={e => { state.searchQuery = e.target.value }}
+          onKeydown={e => {
+            if (route.name === 'map' && e.key === 'Enter') {
+              e.preventDefault()
+              props.onSearch?.(state.searchQuery)
+            }
+          }}
           placeholder={route.name === 'map' ? '놀거리, 지역 검색' : '게시글 검색'}
           style={{ flex: 1, padding: '11px 14px', borderRadius: '11px', border: '1px solid #e5e5e5', background: '#f7f7f7', fontSize: '14px', outline: 'none' }}
         />

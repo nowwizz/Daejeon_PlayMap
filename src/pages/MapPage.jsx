@@ -48,6 +48,10 @@ const DEFAULT_MARKER = {
   color: '#00B398'
 }
 
+const HIDDEN_CONTENT_TYPE_IDS = [
+  '25'
+]
+
 
 export default defineComponent({
   name: 'MapPage',
@@ -66,6 +70,16 @@ export default defineComponent({
     let map = null
     let resizeObserver = null
     let clusterer = null
+
+    const filterHiddenCategories = (
+      places
+    ) => {
+      return (places ?? []).filter(
+        (place) => !HIDDEN_CONTENT_TYPE_IDS.includes(
+          String(place.contenttypeid ?? '')
+        )
+      )
+    }
 
     const loadKakaoMapScript = () => {
       return new Promise((resolve, reject) => {
@@ -278,7 +292,9 @@ export default defineComponent({
 
       clearPlaceClusters()
 
-      const markers = places
+      const markers = filterHiddenCategories(
+        places
+      )
         .filter((place) => {
           const latitude =
             Number(place.mapy)
@@ -441,18 +457,8 @@ export default defineComponent({
     const searchPlace = async (
       keyword
     ) => {
-      const normalizeText = (value) => {
-        return String(value ?? '')
-          .toLowerCase()
-          .replace(/\s+/g, '')
-          .trim()
-      }
-
       const trimmedKeyword =
         keyword.trim().toLowerCase()
-
-      const normalizedKeyword =
-        normalizeText(keyword)
 
       if (!trimmedKeyword) {
         console.warn(
@@ -461,81 +467,37 @@ export default defineComponent({
         return
       }
 
-      const scoredPlaces =
-        allPlaces.value
-          .map((place) => {
-            const normalizedTitle =
-              normalizeText(
-                place.title
-              )
-
-            const normalizedAddr1 =
-              normalizeText(
-                place.addr1
-              )
-
-            const normalizedAddr2 =
-              normalizeText(
-                place.addr2
-              )
-
-            let score = 0
-
-            if (
-              normalizedTitle ===
-              normalizedKeyword
-            ) {
-              score = 100
-            } else if (
-              normalizedTitle.startsWith(
-                normalizedKeyword
-              )
-            ) {
-              score = 80
-            } else if (
-              normalizedTitle.includes(
-                normalizedKeyword
-              )
-            ) {
-              score = 60
-            }
-
-            if (
-              normalizedAddr1.includes(
-                normalizedKeyword
-              )
-            ) {
-              score = Math.max(
-                score,
-                40
-              )
-            }
-
-            if (
-              normalizedAddr2.includes(
-                normalizedKeyword
-              )
-            ) {
-              score = Math.max(
-                score,
-                30
-              )
-            }
-
-            return {
-              place,
-              score
-            }
-          })
-          .filter(
-            (item) => item.score > 0
-          )
-          .sort(
-            (a, b) => b.score - a.score
-          )
-
       const foundPlace =
-        scoredPlaces[0]?.place
+        allPlaces.value.find(
+          (place) => {
+            const title =
+              String(
+                place.title ?? ''
+              ).toLowerCase()
+
+            const addr1 =
+              String(
+                place.addr1 ?? ''
+              ).toLowerCase()
+
+            const addr2 =
+              String(
+                place.addr2 ?? ''
+              ).toLowerCase()
+
+            return (
+              title.includes(
+                trimmedKeyword
+              ) ||
+              addr1.includes(
+                trimmedKeyword
+              ) ||
+              addr2.includes(
+                trimmedKeyword
+              )
+            )
+          }
+        )
 
       if (!foundPlace) {
         console.warn(
@@ -573,6 +535,10 @@ export default defineComponent({
       category
     ) => {
       try {
+        state.selectedPlaceDetail =
+          null
+        collapseSheet()
+
         state.categoryFilter =
           category
 
@@ -581,13 +547,18 @@ export default defineComponent({
             category
           )
 
+        const visiblePlaces =
+          filterHiddenCategories(
+            places
+          )
+
         createPlaceClusters(
-          places
+          visiblePlaces
         )
 
         console.log(
           `[${category}] 장소 개수:`,
-          places.length
+          visiblePlaces.length
         )
       } catch (error) {
         console.error(
@@ -605,19 +576,25 @@ export default defineComponent({
 
         const places =
           await loadAllPlaces()
-        
-          allPlaces.value = places
+
+        const visiblePlaces =
+          filterHiddenCategories(
+            places
+          )
+
+        allPlaces.value =
+          visiblePlaces
 
         state.categoryFilter =
           '전체'
 
         createPlaceClusters(
-          places
+          visiblePlaces
         )
 
         console.log(
           '[전체] 장소 개수:',
-          places.length
+          visiblePlaces.length
         )
       } catch (error) {
         console.error(
@@ -688,7 +665,7 @@ export default defineComponent({
                   }}
                   style={{
                     padding:
-                      '8px 14px',
+                      '9px 0',
                     borderRadius:
                       '20px',
                     fontSize: '12px',
@@ -697,7 +674,12 @@ export default defineComponent({
                       'nowrap',
                     cursor:
                       'pointer',
-                    flexShrink: 0,
+                    flex:
+                      '1 0 72px',
+                    minWidth:
+                      '72px',
+                    textAlign:
+                      'center',
                     transition:
                       'background .2s ease, color .2s ease',
                     background:
