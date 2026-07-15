@@ -1,60 +1,51 @@
-import {
-  defineComponent,
-  onMounted,
-  onBeforeUnmount,
-  ref,
-  watch
-} from 'vue'
+import { defineComponent, onMounted, onBeforeUnmount, ref, watch } from "vue";
 
-import { useAppStore } from '../store/useAppStore.js'
-import { CATEGORIES } from '../theme.js'
-import SearchBar from '../components/SearchBar.jsx'
-import PlaceSheet from '../components/PlaceSheet.jsx'
+import { useAppStore } from "../store/useAppStore.js";
+import { CATEGORIES } from "../theme.js";
+import SearchBar from "../components/SearchBar.jsx";
+import PlaceSheet from "../components/PlaceSheet.jsx";
 
 const CATEGORY_CONTENT_TYPE = {
   전체: null,
-  관광지: '12',
-  여행코스: '25',
-  음식점: '39',
-  축제: '15',
-  숙박: '32'
-}
+  관광지: "12",
+  여행코스: "25",
+  음식점: "39",
+  축제: "15",
+  숙박: "32",
+};
 
 const CATEGORY_MARKER = {
-  '12': {
-    emoji: '📸',
-    color:  '#E08A2E'
+  12: {
+    emoji: "📸",
+    color: "#E08A2E",
   },
-  '25': {
-    emoji: '🗺️',
-    color: '#00B398'
+  25: {
+    emoji: "🗺️",
+    color: "#00B398",
   },
-  '39': {
-    emoji: '🍴',
-    color: '#E27DA0'
+  39: {
+    emoji: "🍴",
+    color: "#E27DA0",
   },
-  '15': {
-    emoji: '🎉',
-    color: '#8A6A00'
+  15: {
+    emoji: "🎉",
+    color: "#8A6A00",
   },
-  '32': {
-    emoji: '🏡',
-    color: '#c596f7'
-  }
-}
+  32: {
+    emoji: "🏡",
+    color: "#c596f7",
+  },
+};
 
 const DEFAULT_MARKER = {
-  emoji: '📍',
-  color: '#00B398'
-}
+  emoji: "📍",
+  color: "#00B398",
+};
 
-const HIDDEN_CONTENT_TYPE_IDS = [
-  '25'
-]
-
+const HIDDEN_CONTENT_TYPE_IDS = ["25"];
 
 export default defineComponent({
-  name: 'MapPage',
+  name: "MapPage",
 
   setup() {
     
@@ -78,93 +69,86 @@ export default defineComponent({
       places
     ) => {
       return (places ?? []).filter(
-        (place) => !HIDDEN_CONTENT_TYPE_IDS.includes(
-          String(place.contenttypeid ?? '')
-        )
-      )
-    }
+        (place) =>
+          !HIDDEN_CONTENT_TYPE_IDS.includes(String(place.contenttypeid ?? "")),
+      );
+    };
 
     const loadKakaoMapScript = () => {
       return new Promise((resolve, reject) => {
         if (window.kakao?.maps) {
-          window.kakao.maps.load(resolve)
-          return
+          window.kakao.maps.load(resolve);
+          return;
         }
 
-        const existingScript =
-          document.querySelector(
-            'script[data-kakao-map-sdk]'
-          )
+        const existingScript = document.querySelector(
+          "script[data-kakao-map-sdk]",
+        );
 
         if (existingScript) {
-          existingScript.addEventListener(
-            'load',
-            () => {
-              window.kakao.maps.load(resolve)
-            }
-          )
+          existingScript.addEventListener("load", () => {
+            window.kakao.maps.load(resolve);
+          });
 
-          existingScript.addEventListener(
-            'error',
-            reject
-          )
+          existingScript.addEventListener("error", reject);
 
-          return
+          return;
         }
 
-        const appKey =
-          import.meta.env.VITE_KAKAO_MAP_KEY
+        const appKey = import.meta.env.VITE_KAKAO_MAP_KEY;
 
         if (!appKey) {
-          reject(
-            new Error(
-              'VITE_KAKAO_MAP_KEY가 설정되지 않았습니다.'
-            )
-          )
-          return
+          reject(new Error("VITE_KAKAO_MAP_KEY가 설정되지 않았습니다."));
+          return;
         }
 
-        const script =
-          document.createElement('script')
+        const script = document.createElement("script");
 
-        script.dataset.kakaoMapSdk = 'true'
+        script.dataset.kakaoMapSdk = "true";
 
         script.src =
           `https://dapi.kakao.com/v2/maps/sdk.js` +
           `?appkey=${appKey}` +
           `&autoload=false` +
-          `&libraries=clusterer`
+          `&libraries=clusterer`;
 
         script.onload = () => {
-          window.kakao.maps.load(resolve)
-        }
+          window.kakao.maps.load(resolve);
+        };
 
         script.onerror = () => {
-          reject(
-            new Error(
-              '카카오맵 SDK를 불러오지 못했습니다.'
-            )
-          )
-        }
+          reject(new Error("카카오맵 SDK를 불러오지 못했습니다."));
+        };
 
-        document.head.appendChild(script)
-      })
-    }
+        document.head.appendChild(script);
+      });
+    };
 
     const createMap = () => {
-      const kakao = window.kakao
+      const kakao = window.kakao;
 
-      const daejeonCenter =
-        new kakao.maps.LatLng(
-          36.3504119,
-          127.3845475
-        )
+      const daejeonCenter = new kakao.maps.LatLng(36.3504119, 127.3845475);
 
-      map = new kakao.maps.Map(
-        mapContainer.value,
-        {
-          center: daejeonCenter,
-          level: 8
+      map = new kakao.maps.Map(mapContainer.value, {
+        center: daejeonCenter,
+        level: 8,
+      });
+
+      const bounds = new kakao.maps.LatLngBounds();
+
+      bounds.extend(new kakao.maps.LatLng(36.1833, 127.2464));
+
+      bounds.extend(new kakao.maps.LatLng(36.4908, 127.5597));
+
+      map.setBounds(bounds);
+
+      const zoomControl = new kakao.maps.ZoomControl();
+
+      map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+      resizeObserver = new ResizeObserver(() => {
+        if (!map || !mapContainer.value) {
+          return;
         }
       )
 
@@ -253,173 +237,124 @@ export default defineComponent({
           map.relayout()
         })
 
-      resizeObserver.observe(
-        mapContainer.value
-      )
-    }
+
+        map.relayout();
+      });
+
+      resizeObserver.observe(mapContainer.value);
+    };
 
     const loadAllPlaces = async () => {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/locations/all`
-      )
+        `${import.meta.env.VITE_API_BASE_URL}/locations/all`,
+      );
 
       if (!response.ok) {
-        throw new Error(
-          `전체 장소 조회 실패: ${response.status}`
-        )
+        throw new Error(`전체 장소 조회 실패: ${response.status}`);
       }
 
-      return await response.json()
-    }
+      return await response.json();
+    };
 
-    const loadCategoryPlaces = async (
-      contenttypeid
-    ) => {
+    const loadCategoryPlaces = async (contenttypeid) => {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/locations` +
-          `?contenttypeid=${encodeURIComponent(
-            contenttypeid
-          )}`
-      )
+          `?contenttypeid=${encodeURIComponent(contenttypeid)}`,
+      );
 
       if (!response.ok) {
-        throw new Error(
-          `카테고리 장소 조회 실패: ${response.status}`
-        )
+        throw new Error(`카테고리 장소 조회 실패: ${response.status}`);
       }
 
-      return await response.json()
-    }
-    const loadPlaceDetail = async (
-      contentid
-    ) => {
+      return await response.json();
+    };
+    const loadPlaceDetail = async (contentid) => {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}` +
-          `/locations/${encodeURIComponent(
-            contentid
-          )}`
-      )
+          `/locations/${encodeURIComponent(contentid)}`,
+      );
 
       if (!response.ok) {
-        throw new Error(
-          `장소 상세 조회 실패: ${response.status}`
-        )
+        throw new Error(`장소 상세 조회 실패: ${response.status}`);
       }
 
-      return await response.json()
-    }
+      return await response.json();
+    };
 
-    const loadPlacesByCategory = async (
-      category
-    ) => {
-      const contenttypeid =
-        CATEGORY_CONTENT_TYPE[category]
+    const loadPlacesByCategory = async (category) => {
+      const contenttypeid = CATEGORY_CONTENT_TYPE[category];
 
       if (contenttypeid === null) {
-        return await loadAllPlaces()
+        return await loadAllPlaces();
       }
 
-      return await loadCategoryPlaces(
-        contenttypeid
-      )
-    }
+      return await loadCategoryPlaces(contenttypeid);
+    };
 
     const clearPlaceClusters = () => {
       if (!clusterer) {
-        return
+        return;
       }
 
-      clusterer.clear()
-      clusterer.setMap(null)
-      clusterer = null
-    }
+      clusterer.clear();
+      clusterer.setMap(null);
+      clusterer = null;
+    };
 
-    const createPlaceClusters = (
-      places
-    ) => {
-      const kakao = window.kakao
+    const createPlaceClusters = (places) => {
+      const kakao = window.kakao;
 
-      clearPlaceClusters()
+      clearPlaceClusters();
 
-      const markers = filterHiddenCategories(
-        places
-      )
+      const markers = filterHiddenCategories(places)
         .filter((place) => {
-          const latitude =
-            Number(place.mapy)
+          const latitude = Number(place.mapy);
 
-          const longitude =
-            Number(place.mapx)
+          const longitude = Number(place.mapx);
 
-          return (
-            Number.isFinite(latitude) &&
-            Number.isFinite(longitude)
-          )
+          return Number.isFinite(latitude) && Number.isFinite(longitude);
         })
         .map((place) => {
-          const markerImage =
-            createEmojiMarkerImage(
-              kakao,
-              place.contenttypeid
-            )
+          const markerImage = createEmojiMarkerImage(
+            kakao,
+            place.contenttypeid,
+          );
 
-          const marker =
-            new kakao.maps.Marker({
-              position:
-                new kakao.maps.LatLng(
-                  Number(place.mapy),
-                  Number(place.mapx)
-                ),
-              title: place.title,
-              image: markerImage
-            })
+          const marker = new kakao.maps.Marker({
+            position: new kakao.maps.LatLng(
+              Number(place.mapy),
+              Number(place.mapx),
+            ),
+            title: place.title,
+            image: markerImage,
+          });
 
-          kakao.maps.event.addListener(
-            marker,
-            'click',
-            async () => {
-              try {
-                const detail =
-                  await loadPlaceDetail(
-                    place.contentid
-                  )
+          kakao.maps.event.addListener(marker, "click", async () => {
+            try {
+              const detail = await loadPlaceDetail(place.contentid);
 
-                openPlaceDetail(detail)
-                moveMapToPlace(detail)
+              openPlaceDetail(detail);
+              moveMapToPlace(detail);
 
-                console.log(
-                  '상세정보 조회 성공:',
-                  detail
-                )
-              } catch (error) {
-                console.error(
-                  '장소 상세 조회 실패:',
-                  error
-                )
-              }
+              console.log("상세정보 조회 성공:", detail);
+            } catch (error) {
+              console.error("장소 상세 조회 실패:", error);
             }
-          )
+          });
 
-          return marker
-        })
+          return marker;
+        });
 
-      clusterer =
-        new kakao.maps.MarkerClusterer({
-          map,
-          markers,
-          averageCenter: true,
-          minLevel: 7
-        })
-    }
+      clusterer = new kakao.maps.MarkerClusterer({
+        map,
+        markers,
+        averageCenter: true,
+        minLevel: 7,
+      });
+    };
 
-    const createEmojiMarkerImage = (
-      kakao,
-      contenttypeid
-    ) => {
-
-      const marker =
-        CATEGORY_MARKER[String(contenttypeid)]
-        ?? DEFAULT_MARKER
+    const createEmojiMarkerImage = (kakao, contenttypeid) => {
+      const marker = CATEGORY_MARKER[String(contenttypeid)] ?? DEFAULT_MARKER;
 
       const svg = `
       <svg xmlns="http://www.w3.org/2000/svg"
@@ -454,135 +389,80 @@ export default defineComponent({
         </text>
 
       </svg>
-      `
+      `;
 
       return new kakao.maps.MarkerImage(
-        "data:image/svg+xml;charset=UTF-8," +
-          encodeURIComponent(svg),
+        "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
 
-        new kakao.maps.Size(48,56),
+        new kakao.maps.Size(48, 56),
 
         {
-          offset:
-            new kakao.maps.Point(24,56)
-        }
-      )
-    }
+          offset: new kakao.maps.Point(24, 56),
+        },
+      );
+    };
 
-    const moveMapToPlace = (
-      place
-    ) => {
+    const moveMapToPlace = (place) => {
       if (!map) {
-        return
+        return;
       }
 
-      const latitude =
-        Number(place.mapy)
+      const latitude = Number(place.mapy);
 
-      const longitude =
-        Number(place.mapx)
+      const longitude = Number(place.mapx);
 
-      if (
-        !Number.isFinite(latitude) ||
-        !Number.isFinite(longitude)
-      ) {
-        console.error(
-          '장소 좌표가 올바르지 않습니다.',
-          place
-        )
-        return
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        console.error("장소 좌표가 올바르지 않습니다.", place);
+        return;
       }
 
-      const position =
-        new window.kakao.maps.LatLng(
-          latitude,
-          longitude
-        )
+      const position = new window.kakao.maps.LatLng(latitude, longitude);
 
-      map.setLevel(3)
-      map.panTo(position)
-    }
+      map.setLevel(3);
+      map.panTo(position);
+    };
 
-    const searchPlace = async (
-      keyword
-    ) => {
-      const trimmedKeyword =
-        keyword.trim().toLowerCase()
+    const searchPlace = async (keyword) => {
+      const trimmedKeyword = keyword.trim().toLowerCase();
 
       if (!trimmedKeyword) {
-        console.warn(
-          '검색어를 입력해주세요.'
-        )
-        return
+        console.warn("검색어를 입력해주세요.");
+        return;
       }
 
-      const foundPlace =
-        allPlaces.value.find(
-          (place) => {
-            const title =
-              String(
-                place.title ?? ''
-              ).toLowerCase()
+      const foundPlace = allPlaces.value.find((place) => {
+        const title = String(place.title ?? "").toLowerCase();
 
-            const addr1 =
-              String(
-                place.addr1 ?? ''
-              ).toLowerCase()
+        const addr1 = String(place.addr1 ?? "").toLowerCase();
 
-            const addr2 =
-              String(
-                place.addr2 ?? ''
-              ).toLowerCase()
+        const addr2 = String(place.addr2 ?? "").toLowerCase();
 
-            return (
-              title.includes(
-                trimmedKeyword
-              ) ||
-              addr1.includes(
-                trimmedKeyword
-              ) ||
-              addr2.includes(
-                trimmedKeyword
-              )
-            )
-          }
-        )
+        return (
+          title.includes(trimmedKeyword) ||
+          addr1.includes(trimmedKeyword) ||
+          addr2.includes(trimmedKeyword)
+        );
+      });
 
       if (!foundPlace) {
-        console.warn(
-          '검색 결과가 없습니다:',
-          keyword
-        )
-        return
+        console.warn("검색 결과가 없습니다:", keyword);
+        return;
       }
 
-      moveMapToPlace(
-        foundPlace
-      )
+      moveMapToPlace(foundPlace);
 
       try {
-        const detail =
-          await loadPlaceDetail(
-            foundPlace.contentid
-          )
+        const detail = await loadPlaceDetail(foundPlace.contentid);
 
-        openPlaceDetail(detail)
+        openPlaceDetail(detail);
       } catch (error) {
-        console.error(
-          '검색 장소 상세 조회 실패:',
-          error
-        )
+        console.error("검색 장소 상세 조회 실패:", error);
       }
 
-      console.log(
-        '검색된 장소:',
-        foundPlace
-      )
-    }
+      console.log("검색된 장소:", foundPlace);
+    };
 
-    const changeCategory = async (
-      category
-    ) => {
+    const changeCategory = async (category) => {
       try {
         state.selectedPlaceDetail =
           null
@@ -617,29 +497,21 @@ export default defineComponent({
           visiblePlaces.length
         )
       } catch (error) {
-        console.error(
-          `[${category}] 장소 조회 실패:`,
-          error
-        )
+        console.error(`[${category}] 장소 조회 실패:`, error);
       }
-    }
+    };
 
     onMounted(async () => {
       try {
-        await loadKakaoMapScript()
+        await loadKakaoMapScript();
 
-        createMap()
+        createMap();
 
-        const places =
-          await loadAllPlaces()
+        const places = await loadAllPlaces();
 
-        const visiblePlaces =
-          filterHiddenCategories(
-            places
-          )
+        const visiblePlaces = filterHiddenCategories(places);
 
-        allPlaces.value =
-          visiblePlaces
+        allPlaces.value = visiblePlaces;
 
         setMapPlaces(
           visiblePlaces
@@ -648,138 +520,113 @@ export default defineComponent({
         state.categoryFilter =
           '전체'
 
-        createPlaceClusters(
-          visiblePlaces
-        )
+        createPlaceClusters(visiblePlaces);
 
-        console.log(
-          '[전체] 장소 개수:',
-          visiblePlaces.length
-        )
+        console.log("[전체] 장소 개수:", visiblePlaces.length);
       } catch (error) {
-        console.error(
-          '카카오맵 초기화 실패:',
-          error
-        )
+        console.error("카카오맵 초기화 실패:", error);
       }
-    })
+    });
 
-    watch(() => state.selectedNeighborPlace, async (newVal) => {
-      if (!newVal) return
-      
-      try {
-        const detail = await loadPlaceDetail(newVal)
-        openPlaceDetail(detail)
-        moveMapToPlace(detail)
-        state.selectedNeighborPlace = null
-      } catch (error) {
-        console.error('이웃 장소 상세 조회 실패:', error)
-      }
-    })
+    watch(
+      () => state.selectedNeighborPlace,
+      async (newVal) => {
+        if (!newVal) return;
+
+        try {
+          const detail = await loadPlaceDetail(newVal);
+          openPlaceDetail(detail);
+          moveMapToPlace(detail);
+          state.selectedNeighborPlace = null;
+        } catch (error) {
+          console.error("이웃 장소 상세 조회 실패:", error);
+        }
+      },
+    );
 
     onBeforeUnmount(() => {
-      resizeObserver?.disconnect()
-      clearPlaceClusters()
-    })
+      resizeObserver?.disconnect();
+      clearPlaceClusters();
+    });
 
     return () => (
       <div
         style={{
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '14px 20px 14px',
+          display: "flex",
+          flexDirection: "column",
+          padding: "14px 20px 14px",
           minHeight: 0,
-          overflow: 'hidden'
+          overflow: "hidden",
         }}
       >
-        <SearchBar 
-          onSearch={searchPlace}
-        />
+        <SearchBar onSearch={searchPlace} />
 
         <div
           style={{
             flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             minHeight: 0,
-            animation: 'fadeIn .25s ease'
+            animation: "fadeIn .25s ease",
           }}
         >
           <div
             style={{
-              display: 'flex',
-              gap: '8px',
-              overflowX: 'auto',
-              paddingBottom: '6px',
-              marginBottom: '12px',
-              flexShrink: 0
+              display: "flex",
+              gap: "8px",
+              overflowX: "auto",
+              paddingBottom: "6px",
+              marginBottom: "12px",
+              flexShrink: 0,
+              justifyContent: "center",
             }}
           >
-            {CATEGORIES.map(
-              (cat) => (
-                <div
-                  key={cat}
-                  onClick={() => {
-                    changeCategory(cat)
-                  }}
-                  style={{
-                    padding:
-                      '9px 0',
-                    borderRadius:
-                      '20px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    whiteSpace:
-                      'nowrap',
-                    cursor:
-                      'pointer',
-                    flex:
-                      '1 0 72px',
-                    minWidth:
-                      '72px',
-                    textAlign:
-                      'center',
-                    transition:
-                      'background .2s ease, color .2s ease',
-                    background:
-                      state.categoryFilter ===
-                      cat
-                        ? '#00B398'
-                        : '#f2f2f2',
-                    color:
-                      state.categoryFilter ===
-                      cat
-                        ? '#fff'
-                        : '#444'
-                  }}
-                >
-                  {cat}
-                </div>
-              )
-            )}
+            {CATEGORIES.map((cat) => (
+              <div
+                key={cat}
+                onClick={() => {
+                  changeCategory(cat);
+                }}
+                style={{
+                  padding: "9px 0",
+                  borderRadius: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  cursor: "pointer",
+                  flex: "1 0 72px",
+                  maxWidth: "71px",
+                  textAlign: "center",
+                  transition: "background .2s ease, color .2s ease",
+                  background:
+                    state.categoryFilter === cat ? "#00B398" : "#f2f2f2",
+                  color: state.categoryFilter === cat ? "#fff" : "#444",
+                }}
+              >
+                {cat}
+              </div>
+            ))}
           </div>
 
           <div
             style={{
-              position: 'relative',
-              width: '100%',
+              position: "relative",
+              width: "100%",
               flex: 1,
               minHeight: 0,
-              borderRadius: '16px',
-              overflow: 'hidden'
+              borderRadius: "16px",
+              overflow: "hidden",
             }}
           >
             <div
               ref={mapContainer}
-              
               style={{
-                position:
-                  'absolute',
+                position: "absolute",
                 inset: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 1
+                width: "100%",
+                height: "100%",
+                zIndex: 1,
               }}
             />
 
@@ -787,6 +634,6 @@ export default defineComponent({
           </div>
         </div>
       </div>
-    )
-  }
-})
+    );
+  },
+});

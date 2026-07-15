@@ -73,3 +73,21 @@ body,
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(28px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes popIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes heartPulse {
+  0% {
+    color: #e23670;
+    transform: scale(1);
+  }
+  35% {
+    color: #c7c7c7;
+    transform: scale(0.82);
+  }
+  70% {
+    color: #e23670;
+    transform: scale(1.2);
+  }
+  100% {
+    color: #e23670;
+    transform: scale(1);
+  }
+}

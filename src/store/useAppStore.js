@@ -1,9 +1,37 @@
-import { reactive, computed } from "vue";
+import { reactive, computed, nextTick } from "vue";
 import { PLACES } from "../data/places.js";
 import { POST_CATEGORIES, postCatStyle } from "../theme.js";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://localhub-2rq6.onrender.com/api";
 const CHAT_STORAGE_KEY = "daejeon-playmap-chat";
+const LIKED_POSTS_STORAGE_KEY = "daejeon-playmap-liked-posts";
+
+function loadLikedPostIds() {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = localStorage.getItem(LIKED_POSTS_STORAGE_KEY);
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch (error) {
+    console.error("좋아요 상태 로딩 실패", error);
+    return new Set();
+  }
+}
+
+function persistLikedPostIds() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      LIKED_POSTS_STORAGE_KEY,
+      JSON.stringify([...likedPostIds]),
+    );
+  } catch (error) {
+    console.error("좋아요 상태 저장 실패", error);
+  }
+}
+
+const likedPostIds = loadLikedPostIds();
 
 function loadStoredChatMessages() {
   if (typeof window === "undefined") return null;
@@ -61,8 +89,10 @@ const state = reactive({
   editTitle: "",
   editPlace: "",
   editContent: "",
+  editCategory: "",
   chatMessages: initialChatMessages,
   chatInput: "",
+  chatStreaming: false,
 });
 
 const selectedPlace = computed(
@@ -145,8 +175,11 @@ const visiblePosts = computed(() => {
       p.place.includes(state.searchQuery) ||
       p.content.includes(state.searchQuery),
   );
-  if (state.sortMode === "popular")
+  if (state.sortMode === "popular") {
     list = [...list].sort((a, b) => b.likes - a.likes);
+  } else if (state.sortMode === "views") {
+    list = [...list].sort((a, b) => b.views - a.views);
+  }
   return list;
 });
 
@@ -162,8 +195,9 @@ function mapPostFromApi(item) {
     category: item.category,
     content: item.content,
     password: "",
-    date: item.created_at,
+    date: (item.created_at || "").slice(0, 16).replace("T", " "),
     likes: item.like_count ?? 0,
+    isLiked: likedPostIds.has(item.id),
     views: item.view_count ?? 0,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
@@ -238,12 +272,45 @@ function setMapCenter(lat, lng) {
 
 function setMapPlaces(places) {
   state.mapPlaces = Array.isArray(places) ? places : [];
+function triggerLikeAnimation(post) {
+  post.animating = false;
+  const token = (post._animToken = (post._animToken || 0) + 1);
+  nextTick(() => {
+    if (post._animToken !== token) return;
+    post.animating = true;
+    setTimeout(() => {
+      if (post._animToken === token) post.animating = false;
+    }, 500);
+  });
 }
 
 function toggleLike(id) {
   const post = state.posts.find((p) => p.id === id);
   if (!post) return;
-  post.likes++;
+
+  const nowLiked = !likedPostIds.has(id);
+  if (nowLiked) {
+    likedPostIds.add(id);
+  } else {
+    likedPostIds.delete(id);
+  }
+  persistLikedPostIds();
+
+  post.isLiked = nowLiked;
+  post.likes += nowLiked ? 1 : -1;
+  triggerLikeAnimation(post);
+
+  fetch(`${API_BASE_URL}/posts/${id}/like`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (data && typeof data.like_count === "number") {
+        post.likes = data.like_count;
+      }
+    })
+    .catch((error) => console.error(error));
 }
 
 function setCategoryFilter(category) {
@@ -264,25 +331,37 @@ function toggleNewPost() {
   state.newCategory = "";
 }
 
-function submitPost() {
+async function submitPost() {
   if (
     !state.newTitle.trim() ||
     !state.newContent.trim() ||
     !state.newPassword.trim()
   )
     return;
-  state.posts.unshift({
-    id: state.nextPostId,
-    title: state.newTitle,
-    place: state.newPlace || "장소 미지정",
-    category: state.newCategory || "자유",
-    content: state.newContent,
-    password: state.newPassword,
-    date: "오늘",
-    likes: 0,
-  });
-  state.nextPostId++;
-  toggleNewPost();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: state.newTitle.trim(),
+        place: state.newPlace.trim() || "",
+        content: state.newContent.trim(),
+        category: state.newCategory || "자유",
+        password: state.newPassword.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "게시글 생성에 실패했습니다.");
+    }
+
+    await fetchPosts();
+    toggleNewPost();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 async function openDetail(id) {
@@ -312,6 +391,7 @@ async function openDetail(id) {
       detail.views = mapped.views;
       detail.content = mapped.content;
       detail.likes = mapped.likes;
+      detail.isLiked = mapped.isLiked;
       detail.date = mapped.date;
       detail.category = mapped.category;
       detail.place = mapped.place;
@@ -334,6 +414,7 @@ function startEdit() {
   state.editTitle = p.title;
   state.editPlace = p.place;
   state.editContent = p.content;
+  state.editCategory = p.category || "자유";
   state.actionPassword = "";
   state.actionError = false;
 }
@@ -348,22 +429,59 @@ function cancelAction() {
   state.actionError = false;
 }
 
-function confirmEdit() {
+async function confirmEdit() {
   const p = detailPost.value;
-  if (p && p.password === state.actionPassword) {
-    p.title = state.editTitle;
-    p.place = state.editPlace;
-    p.content = state.editContent;
+  if (!p) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts/${p.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: state.actionPassword.trim(),
+        title: state.editTitle.trim(),
+        place: state.editPlace.trim(),
+        content: state.editContent.trim(),
+        category: state.editCategory || "자유",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "게시글 수정에 실패했습니다.");
+    }
+
+    await fetchPosts();
     cancelAction();
-  } else state.actionError = true;
+    closeDetail();
+  } catch (error) {
+    state.actionError = true;
+    console.error(error);
+  }
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   const p = detailPost.value;
-  if (p && p.password === state.actionPassword) {
-    state.posts = state.posts.filter((x) => x.id !== p.id);
+  if (!p) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts/${p.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: state.actionPassword.trim() }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "게시글 삭제에 실패했습니다.");
+    }
+
+    await fetchPosts();
     closeDetail();
-  } else state.actionError = true;
+  } catch (error) {
+    state.actionError = true;
+    console.error(error);
+  }
 }
 
 function buildChatHistory() {
@@ -383,10 +501,11 @@ async function sendChat() {
   persistChatMessages();
 
   const botMessageIndex = state.chatMessages.length;
-  state.chatMessages.push({ from: "bot", text: "" });
+  state.chatMessages.push({ from: "bot", text: "", sources: [] });
   persistChatMessages();
 
   state.chatInput = "";
+  state.chatStreaming = true;
 
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -422,6 +541,13 @@ async function sendChat() {
           if (data.type === "content" && typeof data.text === "string") {
             state.chatMessages[botMessageIndex].text += data.text;
             persistChatMessages();
+          } else if (data.type === "metadata" && Array.isArray(data.sources)) {
+            state.chatMessages[botMessageIndex].sources = [
+              ...new Set(
+                data.sources.map((s) => s.source).filter(Boolean),
+              ),
+            ];
+            persistChatMessages();
           }
         } catch (error) {
           console.error("챗봇 스트림 파싱 실패", error);
@@ -438,9 +564,12 @@ async function sendChat() {
     processChunk(new Uint8Array());
     persistChatMessages();
   } catch (error) {
-    state.chatMessages[botMessageIndex].text = `\n\n**[시스템 알림]** 챗봇 응답 생성 중 오류가 발생했습니다: ${error.message}`;
+    state.chatMessages[botMessageIndex].text =
+      `\n\n**[시스템 알림]** 챗봇 응답 생성 중 오류가 발생했습니다: ${error.message}`;
     persistChatMessages();
     console.error(error);
+  } finally {
+    state.chatStreaming = false;
   }
 }
 

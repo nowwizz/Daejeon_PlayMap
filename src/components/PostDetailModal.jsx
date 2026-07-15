@@ -80,12 +80,16 @@ export default defineComponent({
                     <div
                       style={{
                         fontSize: "10.5px",
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: "20px",
+                        fontWeight: 500,
+                        padding: "4px 8px",
+                        borderRadius: "7px",
+                        lineHeight: 1,
                         whiteSpace: "nowrap",
                         background: postCatStyle(detailPost.value.category).bg,
                         color: postCatStyle(detailPost.value.category).fg,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
                       }}
                     >
                       {detailPost.value.category}
@@ -104,12 +108,21 @@ export default defineComponent({
                     <div
                       style={{
                         fontSize: "16px",
-                        color: "#E23670",
+                        color: detailPost.value.isLiked ? "#E23670" : "#c7c7c7",
+                        transition: "color .15s ease",
+                        animation: detailPost.value.animating
+                          ? "heartPulse .5s ease"
+                          : "none",
                       }}
                     >
                       ♥
                     </div>
-                    <div style={{ fontSize: "12px", color: "#888" }}>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: detailPost.value.isLiked ? "#E23670" : "#888",
+                      }}
+                    >
                       {detailPost.value.likes}
                     </div>
                   </div>
@@ -129,7 +142,7 @@ export default defineComponent({
                     fontSize: "14px",
                     lineHeight: 1.6,
                     color: "#444",
-                    marginBottom: "6px",
+                    marginBottom: "60px",
                   }}
                 >
                   {detailPost.value.content}
@@ -138,54 +151,66 @@ export default defineComponent({
                   style={{
                     fontSize: "11px",
                     color: "#999",
-                    marginBottom: "16px",
+                    marginBottom: "10px",
                   }}
                 >
-                  익명 · {detailPost.value.date} · 조회수{" "}
-                  {detailPost.value.likes}
+                  {detailPost.value.date}
+                  　조회수 {detailPost.value.views}
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <div
-                    onClick={startEdit}
-                    style={{
-                      flex: 1,
-                      textAlign: "center",
-                      padding: "11px",
-                      borderRadius: "10px",
-                      background: "#f2f2f2",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    수정
-                  </div>
-                  <div
-                    onClick={startDelete}
-                    style={{
-                      flex: 1,
-                      textAlign: "center",
-                      padding: "11px",
-                      borderRadius: "10px",
-                      background: "#f2f2f2",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    삭제
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <div
+                      onClick={startEdit}
+                      style={{
+                        flex: 1,
+                        minWidth: "60px",
+                        textAlign: "center",
+                        padding: "11px",
+                        borderRadius: "10px",
+                        background: "#8cbad8",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        color: "#fff",
+                      }}
+                    >
+                      수정
+                    </div>
+                    <div
+                      onClick={startDelete}
+                      style={{
+                        flex: 1,
+                        minWidth: "60px",
+                        textAlign: "center",
+                        padding: "11px",
+                        borderRadius: "10px",
+                        background: "#e46e6e",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        color: "#fff",
+                      }}
+                    >
+                      삭제
+                    </div>
                   </div>
                   <div
                     onClick={closeDetail}
                     style={{
                       flex: 1,
+                      maxWidth: "60px",
                       textAlign: "center",
                       padding: "11px",
                       borderRadius: "10px",
                       background: THEME.main,
                       color: "#fff",
                       fontSize: "13px",
-                      fontWeight: 700,
+                      fontWeight: 500,
                       cursor: "pointer",
                     }}
                   >
@@ -256,6 +281,9 @@ export default defineComponent({
                       state.actionPassword = e.target.value;
                     }}
                     type="password"
+                    autoComplete="new-password"
+                    name="edit-post-password"
+                    inputMode="text"
                     placeholder="비밀번호 확인"
                     style={inputStyle}
                   />
@@ -329,6 +357,9 @@ export default defineComponent({
                     state.actionPassword = e.target.value;
                   }}
                   type="password"
+                  autoComplete="new-password"
+                  name="delete-post-password"
+                  inputMode="text"
                   placeholder="비밀번호"
                   style={inputStyle}
                 />
