@@ -28,7 +28,7 @@ const NEARBY_CATEGORY_CONFIG = [
 export default defineComponent({
   name: 'PlaceSheet',
   setup() {
-    const { state, filteredPlaces, openPlace, toggleSheet, openPlaceFromNeighbor } = useAppStore()
+    const { state, distanceSortedPlaces, openPlace, toggleSheet, openPlaceFromNeighbor } = useAppStore()
     const selectedTab = ref('restaurants')
     const sheetContentRef = ref(null)
 
@@ -346,22 +346,45 @@ export default defineComponent({
             </div>
           ) : (
             <>
-              {filteredPlaces.value.map(place => {
-                const s = catStyle(place.category)
+              {distanceSortedPlaces.value.map(place => {
+                const title = place.title ?? place.name
+                const address = [place.addr1, place.addr2].filter(Boolean).join(' ') || `${place.area ?? ''}${place.desc ? ` · ${place.desc}` : ''}`
+                const contentType = place.contenttypename ?? place.category ?? '기타'
+                const placeKey = place.contentid ?? place.id ?? title
+                const thumbnail = place.firstimage1 ?? place.firstimage ?? place.firstimage2 ?? ''
+                const s = catStyle(contentType)
                 return (
-                  <div key={place.id} onClick={() => openPlace(place.id)} style={{ display: 'flex', gap: '12px', border: '1px solid #eee', borderRadius: '14px', padding: '10px', cursor: 'pointer', background: '#fff', flexShrink: 0 }}>
-                    <div style={{ width: '56px', height: '56px', flexShrink: 0, borderRadius: '10px', background: 'repeating-linear-gradient(45deg,#eee,#eee 6px,#f8f8f8 6px,#f8f8f8 12px)' }} />
+                  <div key={placeKey} onClick={() => {
+                    if (place.contentid !== undefined && place.contentid !== null) {
+                      openPlaceFromNeighbor(place.contentid)
+                      return
+                    }
+
+                    if (place.id !== undefined && place.id !== null) {
+                      openPlace(place.id)
+                    }
+                  }} style={{ display: 'flex', gap: '12px', border: '1px solid #eee', borderRadius: '14px', padding: '10px', cursor: 'pointer', background: '#fff', flexShrink: 0 }}>
+                    {thumbnail ? (
+                      <img
+                        src={thumbnail}
+                        alt={title}
+                        style={{ width: '56px', height: '56px', flexShrink: 0, borderRadius: '10px', objectFit: 'cover', background: '#f3f3f3' }}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div style={{ width: '56px', height: '56px', flexShrink: 0, borderRadius: '10px', background: 'repeating-linear-gradient(45deg,#eee,#eee 6px,#f8f8f8 6px,#f8f8f8 12px)' }} />
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{place.name}</div>
-                        <div style={{ fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px', whiteSpace: 'nowrap', background: s.bg, color: s.fg }}>{place.category}</div>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{title}</div>
+                        <div style={{ fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px', whiteSpace: 'nowrap', background: s.bg, color: s.fg }}>{contentType}</div>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#888', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{place.area} · {place.desc}</div>
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{address}</div>
                     </div>
                   </div>
                 )
               })}
-              {filteredPlaces.value.length === 0 && (
+              {distanceSortedPlaces.value.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '16px 0', color: '#999', fontSize: '13px' }}>조건에 맞는 놀거리가 없어요</div>
               )}
             </>

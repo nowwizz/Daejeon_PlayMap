@@ -61,7 +61,9 @@ export default defineComponent({
     const {
       state,
       openPlaceDetail,
-      collapseSheet
+      collapseSheet,
+      setMapCenter,
+      setMapPlaces
     } = useAppStore()
 
     const mapContainer = ref(null)
@@ -70,6 +72,7 @@ export default defineComponent({
     let map = null
     let resizeObserver = null
     let clusterer = null
+    let lastMapLevel = null
 
     const filterHiddenCategories = (
       places
@@ -165,6 +168,11 @@ export default defineComponent({
         }
       )
 
+      setMapCenter(
+        daejeonCenter.getLat(),
+        daejeonCenter.getLng()
+      )
+
       const bounds =
         new kakao.maps.LatLngBounds()
 
@@ -183,6 +191,47 @@ export default defineComponent({
       )
 
       map.setBounds(bounds)
+
+      const mapCenter = map.getCenter()
+      setMapCenter(
+        mapCenter.getLat(),
+        mapCenter.getLng()
+      )
+
+      lastMapLevel = map.getLevel()
+
+      kakao.maps.event.addListener(
+        map,
+        'idle',
+        () => {
+          const center = map.getCenter()
+          setMapCenter(
+            center.getLat(),
+            center.getLng()
+          )
+        }
+      )
+
+      kakao.maps.event.addListener(
+        map,
+        'zoom_changed',
+        () => {
+          const currentLevel = map.getLevel()
+          const isZoomOut =
+            lastMapLevel !== null &&
+            currentLevel > lastMapLevel
+
+          if (
+            isZoomOut &&
+            state.selectedPlaceDetail
+          ) {
+            state.selectedPlaceDetail = null
+            state.selectedNeighborPlace = null
+          }
+
+          lastMapLevel = currentLevel
+        }
+      )
 
       const zoomControl =
         new kakao.maps.ZoomControl()
@@ -552,6 +601,13 @@ export default defineComponent({
             places
           )
 
+        allPlaces.value =
+          visiblePlaces
+
+        setMapPlaces(
+          visiblePlaces
+        )
+
         createPlaceClusters(
           visiblePlaces
         )
@@ -584,6 +640,10 @@ export default defineComponent({
 
         allPlaces.value =
           visiblePlaces
+
+        setMapPlaces(
+          visiblePlaces
+        )
 
         state.categoryFilter =
           '전체'
