@@ -1,4 +1,4 @@
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, nextTick, watch } from "vue";
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME } from "../theme.js";
 
@@ -8,6 +8,38 @@ export default defineComponent({
     const { state, toggleChat, sendChat } = useAppStore();
     const chatInputFocused = ref(false);
     const isClosing = ref(false);
+    const messageListRef = ref(null);
+
+    const scrollToBottom = () => {
+      nextTick(() => {
+        if (messageListRef.value) {
+          const container = messageListRef.value;
+          const start = container.scrollTop;
+          const end = container.scrollHeight;
+          const duration = 420;
+          const startTime = performance.now();
+
+          const step = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 4);
+            container.scrollTop = start + (end - start) * ease;
+
+            if (progress < 1) {
+              requestAnimationFrame(step);
+            }
+          };
+
+          requestAnimationFrame(step);
+        }
+      });
+    };
+
+    watch(
+      () => state.chatMessages.length,
+      () => {
+        scrollToBottom();
+      },
+    );
 
     const onKeyDown = (e) => {
       if (e.key === "Enter") sendChat();
@@ -64,13 +96,14 @@ export default defineComponent({
             >
               <div
                 style={{
-                  fontSize: "15px",
-                  fontWeight: 800,
+                  fontSize: "20px",
+                  fontWeight: 300,
                   padding: "5px",
                   color: "#333333",
+                  fontFamily: "MitmiFont, Pretendard, sans-serif",
                 }}
               >
-                AI <span style={{ color: "#f0cd06" }}>꿈돌이</span>
+                AI 도우미 <span style={{ color: "#f0cd06" }}>꿈돌이</span>
               </div>
               <div
                 onClick={closeChat}
@@ -80,6 +113,7 @@ export default defineComponent({
               </div>
             </div>
             <div
+              ref={messageListRef}
               style={{
                 flex: 1,
                 overflowY: "auto",
@@ -126,6 +160,7 @@ export default defineComponent({
                         msg.from === "bot"
                           ? "16px 16px 16px 4px"
                           : "16px 16px 4px 16px",
+                      whiteSpace: "pre-line",
                     }}
                   >
                     {msg.text}
@@ -177,7 +212,7 @@ export default defineComponent({
                 style={{
                   padding: "12px 15px",
                   borderRadius: "13px",
-                  background: THEME.sub,
+                  background: "#f1e07a",
                   color: "#5b4300",
                   fontWeight: 700,
                   fontSize: "15px",

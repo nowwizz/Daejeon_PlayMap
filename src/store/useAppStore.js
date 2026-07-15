@@ -28,7 +28,10 @@ function persistChatMessages() {
 }
 
 const initialChatMessages = loadStoredChatMessages() || [
-  { from: "bot", text: "안녕하세요! 대전 놀거리 챗봇이에요." },
+  {
+    from: "bot",
+    text: "안녕하세요! 대전 놀거리 챗봇 꿈돌이에요.\n 알고 싶으신 놀거리에 대해 물어봐 주세요!",
+  },
 ];
 
 const state = reactive({
@@ -287,32 +290,82 @@ function confirmDelete() {
   } else state.actionError = true;
 }
 
-function botReply(text) {
-  const t = text.toLowerCase();
-  if (t.includes("자연") || t.includes("숲") || t.includes("산"))
-    return "장태산자연휴양림이나 대청호 오백리길을 추천드려요.";
-  if (t.includes("맛집") || t.includes("빵") || t.includes("먹"))
-    return "성심당 본점은 필수 코스예요! 소제동 카페거리도 함께 들러보세요.";
-  if (t.includes("온천") || t.includes("힐링") || t.includes("휴식"))
-    return "유성온천이나 계족산 황토길에서 여유롭게 힐링해보세요.";
-  if (t.includes("가족") || t.includes("아이") || t.includes("놀이"))
-    return "아이와 함께라면 대전오월드가 좋아요.";
-  if (t.includes("역사") || t.includes("전시") || t.includes("문화"))
-    return "대전근현대사전시관이나 뿌리공원을 추천해요.";
-  return "한빛탑, 성심당 본점, 대전오월드가 요즘 가장 인기예요. 지도에서 위치도 확인해보세요!";
+function buildChatHistory() {
+  return state.chatMessages
+    .filter((msg) => msg.text && msg.text.trim() !== "")
+    .map((msg) => ({
+      role: msg.from === "user" ? "user" : "assistant",
+      content: msg.text,
+    }));
 }
 
-function sendChat() {
+async function sendChat() {
   const text = state.chatInput.trim();
   if (!text) return;
+
   state.chatMessages.push({ from: "user", text });
   persistChatMessages();
+
+  const botMessageIndex = state.chatMessages.length;
+  state.chatMessages.push({ from: "bot", text: "" });
+  persistChatMessages();
+
   state.chatInput = "";
-  const reply = botReply(text);
-  setTimeout(() => {
-    state.chatMessages.push({ from: "bot", text: reply });
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        history: buildChatHistory(),
+      }),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error("챗봇 응답을 받지 못했습니다.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    const processChunk = (chunk) => {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      lines.forEach((line) => {
+        if (!line.startsWith("data: ")) return;
+
+        const dataStr = line.slice(6).trim();
+        if (!dataStr || dataStr === "[DONE]") return;
+
+        try {
+          const data = JSON.parse(dataStr);
+          if (data.type === "content" && typeof data.text === "string") {
+            state.chatMessages[botMessageIndex].text += data.text;
+            persistChatMessages();
+          }
+        } catch (error) {
+          console.error("챗봇 스트림 파싱 실패", error);
+        }
+      });
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      processChunk(value);
+    }
+
+    processChunk(new Uint8Array());
     persistChatMessages();
-  }, 450);
+  } catch (error) {
+    state.chatMessages[botMessageIndex].text = `\n\n**[시스템 알림]** 챗봇 응답 생성 중 오류가 발생했습니다: ${error.message}`;
+    persistChatMessages();
+    console.error(error);
+  }
 }
 
 // 모듈 스코프 싱글턴 — 어디서 호출해도 같은 상태를 공유합니다 (Pinia 없이 구현한 경량 스토어)
