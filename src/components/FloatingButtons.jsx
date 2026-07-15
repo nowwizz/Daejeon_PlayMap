@@ -2,8 +2,7 @@ import { defineComponent, ref } from "vue";
 import { useRoute } from "vue-router";
 import { THEME } from "../theme.js";
 import { useAppStore } from "../store/useAppStore.js";
-
-// AI 아바타 이미지는 uploads/Group 1.png (귀여운 노란 얼굴)을 src/assets/ai-avatar.png로 옮겨서 사용하세요.
+import aiAvatarImg from "../assets/ai-avatar.png";
 export default defineComponent({
   name: "FloatingButtons",
   setup() {
@@ -68,7 +67,7 @@ export default defineComponent({
           }}
         >
           <img
-            src="/src/assets/ai-avatar.png"
+            src={aiAvatarImg}
             alt="AI 챗봇"
             style={{
               width: "100%",

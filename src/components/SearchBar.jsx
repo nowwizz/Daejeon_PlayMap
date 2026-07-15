@@ -2,6 +2,7 @@ import { defineComponent } from "vue";
 import { useRoute } from "vue-router";
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME, POST_CATEGORIES, postCatStyle } from "../theme.js";
+import searchIconImg from "../assets/search.png";
 
 export default defineComponent({
   name: "SearchBar",
@@ -93,7 +94,7 @@ export default defineComponent({
               }}
             >
               <img
-                src="/src/assets/search.png"
+                src={searchIconImg}
                 alt=""
                 style={{ width: "30px", padding: "3px 0 0 0" }}
               />
@@ -116,7 +117,7 @@ export default defineComponent({
               }}
             >
               <img
-                src="/src/assets/search.png"
+                src={searchIconImg}
                 alt=""
                 style={{ width: "30px", padding: "3px 0 0 0" }}
               />

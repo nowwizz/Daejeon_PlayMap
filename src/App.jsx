@@ -7,6 +7,7 @@ import PlaceDetailModal from "./components/PlaceDetailModal.jsx";
 import PostDetailModal from "./components/PostDetailModal.jsx";
 import NewPostModal from "./components/NewPostModal.jsx";
 import ChatModal from "./components/ChatModal.jsx";
+import logoCharImg from "./assets/logoChar.png";
 
 const TITLES = {
   map: "지도에서 놀거리를 찾아보세요",
@@ -66,7 +67,7 @@ export default defineComponent({
               }}
             >
               <img
-                src="/src/assets/logoChar.png"
+                src={logoCharImg}
                 alt=""
                 style={{ width: "35px", margin: "0 5px 5px 0" }}
               />

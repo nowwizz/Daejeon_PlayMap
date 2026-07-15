@@ -146,6 +146,7 @@ function formatSourceName(name) {
 
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME } from "../theme.js";
+import aiCharImg from "../assets/AIChar.png";
 
 export default defineComponent({
   name: "ChatModal",
@@ -336,7 +337,7 @@ export default defineComponent({
                 >
                   {msg.from === "bot" && (
                     <img
-                      src="/src/assets/AIChar.png"
+                      src={aiCharImg}
                       alt="AI 캐릭터"
                       style={{
                         width: "32px",
