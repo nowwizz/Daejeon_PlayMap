@@ -134,6 +134,8 @@ export default defineComponent({
         level: 8,
       });
 
+      setMapCenter(daejeonCenter.getLat(), daejeonCenter.getLng());
+
       const bounds = new kakao.maps.LatLngBounds();
 
       bounds.extend(new kakao.maps.LatLng(36.1833, 127.2464));
@@ -141,6 +143,28 @@ export default defineComponent({
       bounds.extend(new kakao.maps.LatLng(36.4908, 127.5597));
 
       map.setBounds(bounds);
+
+      const mapCenter = map.getCenter();
+      setMapCenter(mapCenter.getLat(), mapCenter.getLng());
+
+      lastMapLevel = map.getLevel();
+
+      kakao.maps.event.addListener(map, "idle", () => {
+        const center = map.getCenter();
+        setMapCenter(center.getLat(), center.getLng());
+      });
+
+      kakao.maps.event.addListener(map, "zoom_changed", () => {
+        const currentLevel = map.getLevel();
+        const isZoomOut = lastMapLevel !== null && currentLevel > lastMapLevel;
+
+        if (isZoomOut && state.selectedPlaceDetail) {
+          state.selectedPlaceDetail = null;
+          state.selectedNeighborPlace = null;
+        }
+
+        lastMapLevel = currentLevel;
+      });
 
       const zoomControl = new kakao.maps.ZoomControl();
 
@@ -150,94 +174,6 @@ export default defineComponent({
         if (!map || !mapContainer.value) {
           return;
         }
-      )
-
-      setMapCenter(
-        daejeonCenter.getLat(),
-        daejeonCenter.getLng()
-      )
-
-      const bounds =
-        new kakao.maps.LatLngBounds()
-
-      bounds.extend(
-        new kakao.maps.LatLng(
-          36.1833,
-          127.2464
-        )
-      )
-
-      bounds.extend(
-        new kakao.maps.LatLng(
-          36.4908,
-          127.5597
-        )
-      )
-
-      map.setBounds(bounds)
-
-      const mapCenter = map.getCenter()
-      setMapCenter(
-        mapCenter.getLat(),
-        mapCenter.getLng()
-      )
-
-      lastMapLevel = map.getLevel()
-
-      kakao.maps.event.addListener(
-        map,
-        'idle',
-        () => {
-          const center = map.getCenter()
-          setMapCenter(
-            center.getLat(),
-            center.getLng()
-          )
-        }
-      )
-
-      kakao.maps.event.addListener(
-        map,
-        'zoom_changed',
-        () => {
-          const currentLevel = map.getLevel()
-          const isZoomOut =
-            lastMapLevel !== null &&
-            currentLevel > lastMapLevel
-
-          if (
-            isZoomOut &&
-            state.selectedPlaceDetail
-          ) {
-            state.selectedPlaceDetail = null
-            state.selectedNeighborPlace = null
-          }
-
-          lastMapLevel = currentLevel
-        }
-      )
-
-      const zoomControl =
-        new kakao.maps.ZoomControl()
-
-      map.addControl(
-        zoomControl,
-        kakao.maps.ControlPosition.RIGHT
-      )
-
-      resizeObserver =
-        new ResizeObserver(() => {
-          if (
-            !map ||
-            !mapContainer.value
-          ) {
-            return
-          }
-
-          map.relayout()
-        })
-
-
         map.relayout();
       });
 
