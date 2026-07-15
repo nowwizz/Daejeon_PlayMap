@@ -18,3 +18,13 @@ export function catStyle(cat) {
     default: return { bg: '#eeeeee', fg: '#666666', dot: '#bbbbbb' }
   }
 }
+export const POST_CATEGORIES = ['자유', '여행 후기', '맛집 추천', '축제 정보']
+
+export function postCatStyle(cat) {
+  switch (cat) {
+    case '여행 후기': return { bg: THEME.mainLight, fg: THEME.main }
+    case '맛집 추천': return { bg: '#FDE2E9', fg: '#C2447A' }
+    case '축제 정보': return { bg: THEME.subLight, fg: THEME.subDeep }
+    default: return { bg: '#eeeeee', fg: '#666666' }
+  }
+}
