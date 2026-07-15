@@ -272,6 +272,8 @@ function setMapCenter(lat, lng) {
 
 function setMapPlaces(places) {
   state.mapPlaces = Array.isArray(places) ? places : [];
+}
+
 function triggerLikeAnimation(post) {
   post.animating = false;
   const token = (post._animToken = (post._animToken || 0) + 1);
