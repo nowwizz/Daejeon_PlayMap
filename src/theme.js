@@ -7,7 +7,7 @@ export const THEME = {
   subDeep: '#8A6A00'
 }
 
-export const CATEGORIES = ['전체', '관광지', '여행코스', '음식점', '축제']
+export const CATEGORIES = ['전체', '관광지', '여행코스', '음식점', '축제', '숙박']
 
 export function catStyle(cat) {
   switch (cat) {
@@ -15,6 +15,7 @@ export function catStyle(cat) {
     case '여행코스': return { bg: THEME.mainLight, fg: THEME.main, dot: THEME.main }
     case '음식점': return { bg: '#FDE2E9', fg: '#C2447A', dot: '#E27DA0' }
     case '축제': return { bg: THEME.subLight, fg: THEME.subDeep, dot: THEME.subDeep }
+    case '숙박': return { bg: '#E6EDFF', fg: '#2E4FAE', dot: '#5F7BD4' }
     default: return { bg: '#eeeeee', fg: '#666666', dot: '#bbbbbb' }
   }
 }

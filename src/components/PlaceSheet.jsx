@@ -1,12 +1,78 @@
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 import { useAppStore } from '../store/useAppStore.js'
 import { catStyle } from '../theme.js'
+
+const NEARBY_CATEGORY_CONFIG = [
+  {
+    id: 'restaurant',
+    title: '음식점',
+    keys: ['nearby_restaurants', 'nearby_foods', 'nearby_food']
+  },
+  {
+    id: 'accommodation',
+    title: '숙박',
+    keys: ['nearby_accommodations', 'nearby_accommodation', 'nearby_hotels']
+  },
+  {
+    id: 'tour',
+    title: '관광지',
+    keys: ['nearby_tourist_spots', 'nearby_tours', 'nearby_attractions']
+  },
+  {
+    id: 'course',
+    title: '여행코스',
+    keys: ['nearby_courses', 'nearby_course', 'nearby_routes']
+  },
+  {
+    id: 'festival',
+    title: '축제',
+    keys: ['nearby_festivals', 'nearby_festival', 'nearby_events']
+  }
+]
 
 export default defineComponent({
   name: 'PlaceSheet',
   setup() {
     const { state, filteredPlaces, openPlace, toggleSheet, openPlaceFromNeighbor } = useAppStore()
-    const selectedTab = ref('restaurants')
+
+    const getNearbyList = (detail, keys) => {
+      for (const key of keys) {
+        if (Array.isArray(detail?.[key])) {
+          return detail[key]
+        }
+      }
+
+      return []
+    }
+
+    const getNearbySections = (detail) => {
+      return NEARBY_CATEGORY_CONFIG
+        .map((category) => {
+          const items = getNearbyList(detail, category.keys)
+
+          return {
+            id: category.id,
+            title: category.title,
+            items: items.slice(0, 4)
+          }
+        })
+        .filter((section) => section.items.length > 0)
+    }
+
+    const shouldHideTypeField = (detail, key) => {
+      const normalizedKey = String(key).toLowerCase()
+      const isTourCategory = String(detail?.contenttypename ?? '').includes('관광지')
+
+      if (['eventstartdate', 'eventenddate'].includes(normalizedKey)) {
+        return true
+      }
+
+      if (isTourCategory && ['heritage1', 'heritage2', 'heritage3'].includes(normalizedKey)) {
+        return true
+      }
+
+      return false
+    }
     
     const translateFieldName = (key) => {
       const translations = {
@@ -29,7 +95,6 @@ export default defineComponent({
     const closePlaceDetail = () => {
       state.selectedPlaceDetail = null
       state.sheetExpanded = false
-      selectedTab.value = 'restaurants'
     }
 
     return () => (
@@ -121,7 +186,7 @@ export default defineComponent({
               {Object.keys(state.selectedPlaceDetail.type_fields ?? {}).length > 0 && (
                 <div style={{ marginTop: '12px', fontSize: '13px' }}>
                   {Object.entries(state.selectedPlaceDetail.type_fields ?? {})
-                    .filter(([key]) => !['eventstartdate', 'eventenddate'].includes(key.toLowerCase()))
+                    .filter(([key]) => !shouldHideTypeField(state.selectedPlaceDetail, key))
                     .map(([key, value]) => (
                       <div key={key} style={{ marginBottom: '6px' }}>
                         <strong>{translateFieldName(key)}</strong>: {value}
@@ -130,96 +195,51 @@ export default defineComponent({
                 </div>
               )}
 
-              {(state.selectedPlaceDetail.nearby_restaurants?.length > 0 || state.selectedPlaceDetail.nearby_accommodations?.length > 0) && (
+              {getNearbySections(state.selectedPlaceDetail).length > 0 && (
                 <div style={{ marginTop: '18px' }}>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #eee' }}>
-                    <button
-                      onClick={() => { selectedTab.value = 'restaurants' }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '8px 12px',
-                        fontSize: '13px',
-                        fontWeight: selectedTab.value === 'restaurants' ? 700 : 500,
-                        cursor: 'pointer',
-                        color: selectedTab.value === 'restaurants' ? '#00B398' : '#999',
-                        borderBottom: selectedTab.value === 'restaurants' ? '2px solid #00B398' : 'none'
-                      }}
-                    >
-                      음식점 ({state.selectedPlaceDetail.nearby_restaurants?.length ?? 0})
-                    </button>
-                    <button
-                      onClick={() => { selectedTab.value = 'accommodations' }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '8px 12px',
-                        fontSize: '13px',
-                        fontWeight: selectedTab.value === 'accommodations' ? 700 : 500,
-                        cursor: 'pointer',
-                        color: selectedTab.value === 'accommodations' ? '#00B398' : '#999',
-                        borderBottom: selectedTab.value === 'accommodations' ? '2px solid #00B398' : 'none'
-                      }}
-                    >
-                      숙소 ({state.selectedPlaceDetail.nearby_accommodations?.length ?? 0})
-                    </button>
-                  </div>
+                  {getNearbySections(state.selectedPlaceDetail).map((section) => (
+                    <div key={section.id} style={{ marginBottom: '14px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '8px', color: '#444' }}>
+                        {section.title} ({section.items.length})
+                      </div>
 
-                  {selectedTab.value === 'restaurants' && (
-                    <div>
-                      {state.selectedPlaceDetail.nearby_restaurants?.slice(0, 4).map((restaurant) => (
-                        <div key={restaurant.contentid} onClick={() => openPlaceFromNeighbor(restaurant.contentid)} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+                      {section.items.map((item) => (
+                        <div
+                          key={`${section.id}-${item.contentid}`}
+                          onClick={() => openPlaceFromNeighbor(item.contentid)}
+                          style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                        >
                           <div style={{ fontSize: '13px', fontWeight: 700 }}>
-                            {restaurant.title}
+                            {item.title}
                           </div>
+
                           <div style={{ marginTop: '4px', fontSize: '12px', color: '#777' }}>
-                            {restaurant.addr1}
+                            {item.addr1}
                           </div>
-                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
-                            약 {restaurant.distance_km}km
-                          </div>
-                          {restaurant.opentimefood && (
-                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
-                              <strong>영업시간</strong>: {restaurant.opentimefood}
+
+                          {(item.distance_km || item.distance) && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
+                              약 {item.distance_km ?? item.distance}km
                             </div>
                           )}
-                          {restaurant.parkingfood && (
+
+                          {item.opentimefood && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
+                              <strong>영업시간</strong>: {item.opentimefood}
+                            </div>
+                          )}
+
+                          {item.parkingfood && (
                             <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
                               주차 가능
                             </div>
                           )}
                         </div>
                       ))}
-                      {!state.selectedPlaceDetail.nearby_restaurants || state.selectedPlaceDetail.nearby_restaurants.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '16px', color: '#999', fontSize: '12px' }}>
-                          주변 음식점이 없어요
-                        </div>
-                      )}
                     </div>
-                  )}
-
-                  {selectedTab.value === 'accommodations' && (
-                    <div>
-                      {state.selectedPlaceDetail.nearby_accommodations?.slice(0, 4).map((accommodation) => (
-                        <div key={accommodation.contentid} onClick={() => openPlaceFromNeighbor(accommodation.contentid)} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
-                          <div style={{ fontSize: '13px', fontWeight: 700 }}>
-                            {accommodation.title}
-                          </div>
-                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#777' }}>
-                            {accommodation.addr1}
-                          </div>
-                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
-                            약 {accommodation.distance_km}km
-                          </div>
-                        </div>
-                      ))}
-                      {!state.selectedPlaceDetail.nearby_accommodations || state.selectedPlaceDetail.nearby_accommodations.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '16px', color: '#999', fontSize: '12px' }}>
-                          주변 숙소가 없어요
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>

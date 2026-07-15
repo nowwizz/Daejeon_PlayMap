@@ -16,7 +16,8 @@ const CATEGORY_CONTENT_TYPE = {
   관광지: '12',
   여행코스: '25',
   음식점: '39',
-  축제: '15'
+  축제: '15',
+  숙박: '32'
 }
 
 const CATEGORY_MARKER = {
@@ -35,6 +36,10 @@ const CATEGORY_MARKER = {
   '15': {
     emoji: '🎉',
     color: '#8A6A00'
+  },
+  '32': {
+    emoji: '🏡',
+    color: '#c596f7'
   }
 }
 
@@ -433,11 +438,21 @@ export default defineComponent({
       map.panTo(position)
     }
 
-    const searchPlace = (
+    const searchPlace = async (
       keyword
     ) => {
+      const normalizeText = (value) => {
+        return String(value ?? '')
+          .toLowerCase()
+          .replace(/\s+/g, '')
+          .trim()
+      }
+
       const trimmedKeyword =
         keyword.trim().toLowerCase()
+
+      const normalizedKeyword =
+        normalizeText(keyword)
 
       if (!trimmedKeyword) {
         console.warn(
@@ -446,37 +461,81 @@ export default defineComponent({
         return
       }
 
-      const foundPlace =
-        allPlaces.value.find(
-          (place) => {
-            const title =
-              String(
-                place.title ?? ''
-              ).toLowerCase()
-
-            const addr1 =
-              String(
-                place.addr1 ?? ''
-              ).toLowerCase()
-
-            const addr2 =
-              String(
-                place.addr2 ?? ''
-              ).toLowerCase()
-
-            return (
-              title.includes(
-                trimmedKeyword
-              ) ||
-              addr1.includes(
-                trimmedKeyword
-              ) ||
-              addr2.includes(
-                trimmedKeyword
+      const scoredPlaces =
+        allPlaces.value
+          .map((place) => {
+            const normalizedTitle =
+              normalizeText(
+                place.title
               )
-            )
-          }
-        )
+
+            const normalizedAddr1 =
+              normalizeText(
+                place.addr1
+              )
+
+            const normalizedAddr2 =
+              normalizeText(
+                place.addr2
+              )
+
+            let score = 0
+
+            if (
+              normalizedTitle ===
+              normalizedKeyword
+            ) {
+              score = 100
+            } else if (
+              normalizedTitle.startsWith(
+                normalizedKeyword
+              )
+            ) {
+              score = 80
+            } else if (
+              normalizedTitle.includes(
+                normalizedKeyword
+              )
+            ) {
+              score = 60
+            }
+
+            if (
+              normalizedAddr1.includes(
+                normalizedKeyword
+              )
+            ) {
+              score = Math.max(
+                score,
+                40
+              )
+            }
+
+            if (
+              normalizedAddr2.includes(
+                normalizedKeyword
+              )
+            ) {
+              score = Math.max(
+                score,
+                30
+              )
+            }
+
+            return {
+              place,
+              score
+            }
+          })
+          .filter(
+            (item) => item.score > 0
+          )
+          .sort(
+            (a, b) => b.score - a.score
+          )
+
+      const foundPlace =
+        scoredPlaces[0]?.place
 
       if (!foundPlace) {
         console.warn(
@@ -489,6 +548,20 @@ export default defineComponent({
       moveMapToPlace(
         foundPlace
       )
+
+      try {
+        const detail =
+          await loadPlaceDetail(
+            foundPlace.contentid
+          )
+
+        openPlaceDetail(detail)
+      } catch (error) {
+        console.error(
+          '검색 장소 상세 조회 실패:',
+          error
+        )
+      }
 
       console.log(
         '검색된 장소:',
