@@ -64,6 +64,15 @@ body,
     opacity: 1;
   }
 }
+/* Keep default cluster marker style and only change number font. */
+.cluster,
+.cluster * {
+	font-family: 'Pretendard', sans-serif !important;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(28px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes popIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes heartPulse {
   0% {
     color: #e23670;

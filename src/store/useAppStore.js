@@ -65,6 +65,8 @@ const initialChatMessages = loadStoredChatMessages() || [
 const state = reactive({
   searchQuery: "",
   categoryFilter: "전체",
+  mapCenter: null,
+  mapPlaces: [],
   selectedPlaceId: null,
   selectedPlaceDetail: null,
   selectedNeighborPlace: null,
@@ -117,6 +119,53 @@ const filteredPlaces = computed(() =>
         p.desc.includes(state.searchQuery)),
   ),
 );
+
+const distanceSortedPlaces = computed(() => {
+  const basePlaces =
+    Array.isArray(state.mapPlaces) && state.mapPlaces.length > 0
+      ? state.mapPlaces
+      : filteredPlaces.value
+
+  const center = state.mapCenter
+
+  if (!center) {
+    return basePlaces
+  }
+
+  const toRad = (degree) => degree * (Math.PI / 180)
+
+  const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+    const earthRadiusKm = 6371
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+    return earthRadiusKm * c
+  }
+
+  return [...basePlaces].sort((a, b) => {
+    const aLat = Number(a.mapy)
+    const aLng = Number(a.mapx)
+    const bLat = Number(b.mapy)
+    const bLng = Number(b.mapx)
+
+    const aDist = Number.isFinite(aLat) && Number.isFinite(aLng)
+      ? getDistanceKm(center.lat, center.lng, aLat, aLng)
+      : Number.POSITIVE_INFINITY
+
+    const bDist = Number.isFinite(bLat) && Number.isFinite(bLng)
+      ? getDistanceKm(center.lat, center.lng, bLat, bLng)
+      : Number.POSITIVE_INFINITY
+
+    return aDist - bDist
+  })
+})
 
 const visiblePosts = computed(() => {
   let list = state.posts.filter(
@@ -210,6 +259,19 @@ function selectSort(mode) {
   fetchPosts();
 }
 
+function setMapCenter(lat, lng) {
+  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+    return;
+  }
+
+  state.mapCenter = {
+    lat: Number(lat),
+    lng: Number(lng),
+  };
+}
+
+function setMapPlaces(places) {
+  state.mapPlaces = Array.isArray(places) ? places : [];
 function triggerLikeAnimation(post) {
   post.animating = false;
   const token = (post._animToken = (post._animToken || 0) + 1);
@@ -518,6 +580,7 @@ export function useAppStore() {
     selectedPlace,
     nearbyPlaces,
     filteredPlaces,
+    distanceSortedPlaces,
     visiblePosts,
     detailPost,
     openPlace,
@@ -525,6 +588,8 @@ export function useAppStore() {
     openPlaceDetail,
     closePlaceDetail,
     openPlaceFromNeighbor,
+    setMapCenter,
+    setMapPlaces,
     toggleSheet,
     collapseSheet,
     toggleChat,

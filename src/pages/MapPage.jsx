@@ -48,16 +48,26 @@ export default defineComponent({
   name: "MapPage",
 
   setup() {
-    const { state, openPlaceDetail, collapseSheet } = useAppStore();
+    
+    const {
+      state,
+      openPlaceDetail,
+      collapseSheet,
+      setMapCenter,
+      setMapPlaces
+    } = useAppStore()
 
-    const mapContainer = ref(null);
-    const allPlaces = ref([]);
+    const mapContainer = ref(null)
+    const allPlaces = ref([])
 
-    let map = null;
-    let resizeObserver = null;
-    let clusterer = null;
+    let map = null
+    let resizeObserver = null
+    let clusterer = null
+    let lastMapLevel = null
 
-    const filterHiddenCategories = (places) => {
+    const filterHiddenCategories = (
+      places
+    ) => {
       return (places ?? []).filter(
         (place) =>
           !HIDDEN_CONTENT_TYPE_IDS.includes(String(place.contenttypeid ?? "")),
@@ -140,6 +150,93 @@ export default defineComponent({
         if (!map || !mapContainer.value) {
           return;
         }
+      )
+
+      setMapCenter(
+        daejeonCenter.getLat(),
+        daejeonCenter.getLng()
+      )
+
+      const bounds =
+        new kakao.maps.LatLngBounds()
+
+      bounds.extend(
+        new kakao.maps.LatLng(
+          36.1833,
+          127.2464
+        )
+      )
+
+      bounds.extend(
+        new kakao.maps.LatLng(
+          36.4908,
+          127.5597
+        )
+      )
+
+      map.setBounds(bounds)
+
+      const mapCenter = map.getCenter()
+      setMapCenter(
+        mapCenter.getLat(),
+        mapCenter.getLng()
+      )
+
+      lastMapLevel = map.getLevel()
+
+      kakao.maps.event.addListener(
+        map,
+        'idle',
+        () => {
+          const center = map.getCenter()
+          setMapCenter(
+            center.getLat(),
+            center.getLng()
+          )
+        }
+      )
+
+      kakao.maps.event.addListener(
+        map,
+        'zoom_changed',
+        () => {
+          const currentLevel = map.getLevel()
+          const isZoomOut =
+            lastMapLevel !== null &&
+            currentLevel > lastMapLevel
+
+          if (
+            isZoomOut &&
+            state.selectedPlaceDetail
+          ) {
+            state.selectedPlaceDetail = null
+            state.selectedNeighborPlace = null
+          }
+
+          lastMapLevel = currentLevel
+        }
+      )
+
+      const zoomControl =
+        new kakao.maps.ZoomControl()
+
+      map.addControl(
+        zoomControl,
+        kakao.maps.ControlPosition.RIGHT
+      )
+
+      resizeObserver =
+        new ResizeObserver(() => {
+          if (
+            !map ||
+            !mapContainer.value
+          ) {
+            return
+          }
+
+          map.relayout()
+        })
+
 
         map.relayout();
       });
@@ -367,18 +464,38 @@ export default defineComponent({
 
     const changeCategory = async (category) => {
       try {
-        state.selectedPlaceDetail = null;
-        collapseSheet();
+        state.selectedPlaceDetail =
+          null
+        collapseSheet()
 
-        state.categoryFilter = category;
+        state.categoryFilter =
+          category
 
-        const places = await loadPlacesByCategory(category);
+        const places =
+          await loadPlacesByCategory(
+            category
+          )
 
-        const visiblePlaces = filterHiddenCategories(places);
+        const visiblePlaces =
+          filterHiddenCategories(
+            places
+          )
 
-        createPlaceClusters(visiblePlaces);
+        allPlaces.value =
+          visiblePlaces
 
-        console.log(`[${category}] 장소 개수:`, visiblePlaces.length);
+        setMapPlaces(
+          visiblePlaces
+        )
+
+        createPlaceClusters(
+          visiblePlaces
+        )
+
+        console.log(
+          `[${category}] 장소 개수:`,
+          visiblePlaces.length
+        )
       } catch (error) {
         console.error(`[${category}] 장소 조회 실패:`, error);
       }
@@ -396,7 +513,12 @@ export default defineComponent({
 
         allPlaces.value = visiblePlaces;
 
-        state.categoryFilter = "전체";
+        setMapPlaces(
+          visiblePlaces
+        )
+
+        state.categoryFilter =
+          '전체'
 
         createPlaceClusters(visiblePlaces);
 
