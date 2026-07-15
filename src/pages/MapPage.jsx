@@ -2,7 +2,8 @@ import {
   defineComponent,
   onMounted,
   onBeforeUnmount,
-  ref
+  ref,
+  watch
 } from 'vue'
 
 import { useAppStore } from '../store/useAppStore.js'
@@ -314,6 +315,7 @@ export default defineComponent({
                   )
 
                 openPlaceDetail(detail)
+                moveMapToPlace(detail)
 
                 console.log(
                   '상세정보 조회 성공:',
@@ -549,6 +551,19 @@ export default defineComponent({
           '카카오맵 초기화 실패:',
           error
         )
+      }
+    })
+
+    watch(() => state.selectedNeighborPlace, async (newVal) => {
+      if (!newVal) return
+      
+      try {
+        const detail = await loadPlaceDetail(newVal)
+        openPlaceDetail(detail)
+        moveMapToPlace(detail)
+        state.selectedNeighborPlace = null
+      } catch (error) {
+        console.error('이웃 장소 상세 조회 실패:', error)
       }
     })
 

@@ -1,19 +1,36 @@
-import { defineComponent, watch } from 'vue'
+import { defineComponent, ref } from 'vue'
 import { useAppStore } from '../store/useAppStore.js'
 import { catStyle } from '../theme.js'
 
 export default defineComponent({
   name: 'PlaceSheet',
   setup() {
-    const { state, filteredPlaces, openPlace, toggleSheet } = useAppStore()
+    const { state, filteredPlaces, openPlace, toggleSheet, openPlaceFromNeighbor } = useAppStore()
+    const selectedTab = ref('restaurants')
     
-    watch(() => state.selectedPlaceDetail, (newVal) => {
-      console.log('PlaceSheet: selectedPlaceDetail updated:', newVal)
-    })
-
-    watch(() => state.sheetExpanded, (newVal) => {
-      console.log('PlaceSheet: sheetExpanded updated:', newVal)
-    })
+    const translateFieldName = (key) => {
+      const translations = {
+        'distance': '이동거리',
+        'taketime': '영업시간',
+        'opentimefood': '영업시간',
+        'parkingfood': '주차',
+        'parking': '주차장',
+        'usetime': '이용시간',
+        'chkbabycarriage': '유모차 대여',
+        'chkpet': '반려동물 동반',
+        'chkkidszone': '어린이 영역',
+        'infocenter': '안내센터',
+        'opendate': '개장일',
+        'restdate': '휴무일'
+      }
+      return translations[key.toLowerCase()] || key
+    }
+    
+    const closePlaceDetail = () => {
+      state.selectedPlaceDetail = null
+      state.sheetExpanded = false
+      selectedTab.value = 'restaurants'
+    }
 
     return () => (
       <div style={{
@@ -29,6 +46,29 @@ export default defineComponent({
           : { height: 0, overflow: 'hidden', padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {state.selectedPlaceDetail ? (
             <div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                <button 
+                  onClick={closePlaceDetail}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    padding: '0',
+                    marginRight: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px'
+                  }}
+                  title="닫기"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+              </div>
+
               <div style={{ fontSize: '20px', fontWeight: 800 }}>
                 {state.selectedPlaceDetail.title}
               </div>
@@ -37,78 +77,149 @@ export default defineComponent({
                 {state.selectedPlaceDetail.contenttypename}
               </div>
 
-              <div style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
-                {state.selectedPlaceDetail.addr1}
-                {state.selectedPlaceDetail.addr2 ? ` ${state.selectedPlaceDetail.addr2}` : ''}
+              {state.selectedPlaceDetail.firstimage && (
+                <div style={{ marginTop: '12px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <img 
+                    src={state.selectedPlaceDetail.firstimage} 
+                    alt={state.selectedPlaceDetail.title}
+                    style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+
+              {state.selectedPlaceDetail.firstimage2 && (
+                <div style={{ marginTop: '8px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <img 
+                    src={state.selectedPlaceDetail.firstimage2} 
+                    alt={state.selectedPlaceDetail.title}
+                    style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+
+              {!state.selectedPlaceDetail.firstimage && !state.selectedPlaceDetail.firstimage2 && (
+                <div style={{ marginTop: '12px', padding: '40px 16px', background: '#f5f5f5', borderRadius: '12px', textAlign: 'center', color: '#999', fontSize: '13px' }}>
+                  사진이 없어요
+                </div>
+              )}
+
+              <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+                <div><strong>주소</strong></div>
+                <div style={{ marginTop: '4px' }}>
+                  {state.selectedPlaceDetail.addr1}
+                  {state.selectedPlaceDetail.addr2 ? ` ${state.selectedPlaceDetail.addr2}` : ''}
+                </div>
               </div>
 
               {state.selectedPlaceDetail.tel && (
                 <div style={{ marginTop: '12px', fontSize: '13px' }}>
-                  <strong>전화번호</strong>
-                  {' · '}
-                  {state.selectedPlaceDetail.tel}
-                </div>
-              )}
-
-              {state.selectedPlaceDetail.zipcode && (
-                <div style={{ marginTop: '6px', fontSize: '13px' }}>
-                  <strong>우편번호</strong>
-                  {' · '}
-                  {state.selectedPlaceDetail.zipcode}
+                  <div><strong>연락처</strong></div>
+                  <div style={{ marginTop: '4px' }}>{state.selectedPlaceDetail.tel}</div>
                 </div>
               )}
 
               {Object.keys(state.selectedPlaceDetail.type_fields ?? {}).length > 0 && (
-                <div style={{ marginTop: '18px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '8px' }}>
-                    이용 정보
-                  </div>
-                  {Object.entries(state.selectedPlaceDetail.type_fields ?? {}).map(([key, value]) => (
-                    <div key={key} style={{ padding: '10px', marginBottom: '6px', borderRadius: '10px', background: '#f7f7f7', fontSize: '13px' }}>
-                      <strong>{key}</strong>
-                      {' · '}
-                      {value}
-                    </div>
-                  ))}
+                <div style={{ marginTop: '12px', fontSize: '13px' }}>
+                  {Object.entries(state.selectedPlaceDetail.type_fields ?? {})
+                    .filter(([key]) => !['eventstartdate', 'eventenddate'].includes(key.toLowerCase()))
+                    .map(([key, value]) => (
+                      <div key={key} style={{ marginBottom: '6px' }}>
+                        <strong>{translateFieldName(key)}</strong>: {value}
+                      </div>
+                    ))}
                 </div>
               )}
 
-              {state.selectedPlaceDetail.detail_info?.length > 0 && (
+              {(state.selectedPlaceDetail.nearby_restaurants?.length > 0 || state.selectedPlaceDetail.nearby_accommodations?.length > 0) && (
                 <div style={{ marginTop: '18px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '8px' }}>
-                    상세 안내
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #eee' }}>
+                    <button
+                      onClick={() => { selectedTab.value = 'restaurants' }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        fontWeight: selectedTab.value === 'restaurants' ? 700 : 500,
+                        cursor: 'pointer',
+                        color: selectedTab.value === 'restaurants' ? '#00B398' : '#999',
+                        borderBottom: selectedTab.value === 'restaurants' ? '2px solid #00B398' : 'none'
+                      }}
+                    >
+                      음식점 ({state.selectedPlaceDetail.nearby_restaurants?.length ?? 0})
+                    </button>
+                    <button
+                      onClick={() => { selectedTab.value = 'accommodations' }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        fontWeight: selectedTab.value === 'accommodations' ? 700 : 500,
+                        cursor: 'pointer',
+                        color: selectedTab.value === 'accommodations' ? '#00B398' : '#999',
+                        borderBottom: selectedTab.value === 'accommodations' ? '2px solid #00B398' : 'none'
+                      }}
+                    >
+                      숙소 ({state.selectedPlaceDetail.nearby_accommodations?.length ?? 0})
+                    </button>
                   </div>
-                  {state.selectedPlaceDetail.detail_info.map((info) => (
-                    <div key={info.serialnum} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700 }}>
-                        {info.infoname}
-                      </div>
-                      <div style={{ marginTop: '5px', fontSize: '12px', color: '#666', lineHeight: 1.5 }}>
-                        {info.infotext}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              {state.selectedPlaceDetail.nearby_restaurants?.length > 0 && (
-                <div style={{ marginTop: '18px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '8px' }}>
-                    주변 음식점
-                  </div>
-                  {state.selectedPlaceDetail.nearby_restaurants.map((restaurant) => (
-                    <div key={restaurant.contentid} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700 }}>
-                        {restaurant.title}
-                      </div>
-                      <div style={{ marginTop: '4px', fontSize: '12px', color: '#777' }}>
-                        {restaurant.addr1}
-                      </div>
-                      <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
-                        약 {restaurant.distance_km}km
-                      </div>
+                  {selectedTab.value === 'restaurants' && (
+                    <div>
+                      {state.selectedPlaceDetail.nearby_restaurants?.slice(0, 4).map((restaurant) => (
+                        <div key={restaurant.contentid} onClick={() => openPlaceFromNeighbor(restaurant.contentid)} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+                          <div style={{ fontSize: '13px', fontWeight: 700 }}>
+                            {restaurant.title}
+                          </div>
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#777' }}>
+                            {restaurant.addr1}
+                          </div>
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
+                            약 {restaurant.distance_km}km
+                          </div>
+                          {restaurant.opentimefood && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
+                              <strong>영업시간</strong>: {restaurant.opentimefood}
+                            </div>
+                          )}
+                          {restaurant.parkingfood && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
+                              주차 가능
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {!state.selectedPlaceDetail.nearby_restaurants || state.selectedPlaceDetail.nearby_restaurants.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '16px', color: '#999', fontSize: '12px' }}>
+                          주변 음식점이 없어요
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  )}
+
+                  {selectedTab.value === 'accommodations' && (
+                    <div>
+                      {state.selectedPlaceDetail.nearby_accommodations?.slice(0, 4).map((accommodation) => (
+                        <div key={accommodation.contentid} onClick={() => openPlaceFromNeighbor(accommodation.contentid)} style={{ padding: '12px', marginBottom: '8px', border: '1px solid #eee', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+                          <div style={{ fontSize: '13px', fontWeight: 700 }}>
+                            {accommodation.title}
+                          </div>
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#777' }}>
+                            {accommodation.addr1}
+                          </div>
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: '#00B398', fontWeight: 700 }}>
+                            약 {accommodation.distance_km}km
+                          </div>
+                        </div>
+                      ))}
+                      {!state.selectedPlaceDetail.nearby_accommodations || state.selectedPlaceDetail.nearby_accommodations.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '16px', color: '#999', fontSize: '12px' }}>
+                          주변 숙소가 없어요
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
