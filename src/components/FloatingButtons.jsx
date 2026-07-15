@@ -20,9 +20,9 @@ export default defineComponent({
             onMouseenter={() => writeHover.value = true}
             onMouseleave={() => writeHover.value = false}
             style={{
-              width: '50px', height: '50px', borderRadius: '50%', background: THEME.main, color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', fontWeight: 800,
-              cursor: 'pointer', boxShadow: '0 8px 20px -6px rgba(0,0,0,0.5)', transition: 'transform .15s ease',
+              width: '54px', height: '54px', borderRadius: '50%', background: THEME.main, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 800,
+              cursor: 'pointer', border: 'none', boxShadow: '0 8px 20px -6px rgba(0,0,0,0.5)', transition: 'transform .15s ease',
               transform: writeHover.value ? 'scale(1.08)' : 'scale(1)'
             }}
           >✎</div>
@@ -36,6 +36,7 @@ export default defineComponent({
             height: '54px',
             borderRadius: '50%',
             cursor: 'pointer',
+            border: 'none',
             boxShadow: '0 8px 20px -6px rgba(0,0,0,0.5)',
             overflow: 'hidden',
             transition: 'transform .15s ease',
