@@ -112,6 +112,9 @@ export default defineComponent({
                   state.newPassword = e.target.value;
                 }}
                 type="password"
+                autoComplete="new-password"
+                name="new-post-password"
+                inputMode="text"
                 placeholder="비밀번호 (수정/삭제 시 필요)"
                 style={inputStyle}
               />
