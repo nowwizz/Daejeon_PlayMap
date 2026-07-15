@@ -38,17 +38,17 @@ export default defineComponent({
             onInput={(e) => {
               state.searchQuery = e.target.value;
             }}
-            onKeydown={(e) => {
-              if (route.name === "map" && e.key === "Enter") {
-                e.preventDefault();
-                props.onSearch?.(state.searchQuery);
-              }
-            }}
             placeholder={
               route.name === "map" ? "놀거리, 지역 검색" : "게시글 검색"
             }
             onKeydown={(e) => {
-              if (e.key === "Enter") runSearch();
+              if (e.key !== "Enter") return;
+              if (route.name === "map") {
+                e.preventDefault();
+                props.onSearch?.(state.searchQuery);
+              } else if (route.name === "community") {
+                runSearch();
+              }
             }}
             style={{
               flex: 1,

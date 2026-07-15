@@ -1,4 +1,5 @@
 import { defineComponent, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import { useAppStore } from "../store/useAppStore.js";
 import { CATEGORIES } from "../theme.js";
@@ -49,6 +50,8 @@ export default defineComponent({
 
   setup() {
     const { state, openPlaceDetail, collapseSheet } = useAppStore();
+    const route = useRoute();
+    const router = useRouter();
 
     const mapContainer = ref(null);
     const allPlaces = ref([]);
@@ -401,6 +404,21 @@ export default defineComponent({
         createPlaceClusters(visiblePlaces);
 
         console.log("[전체] 장소 개수:", visiblePlaces.length);
+
+        const targetContentId = route.query.place;
+
+        if (targetContentId) {
+          try {
+            const detail = await loadPlaceDetail(targetContentId);
+
+            openPlaceDetail(detail);
+            moveMapToPlace(detail);
+          } catch (error) {
+            console.error("공유된 장소 조회 실패:", error);
+          }
+
+          router.replace({ name: "map" });
+        }
       } catch (error) {
         console.error("카카오맵 초기화 실패:", error);
       }

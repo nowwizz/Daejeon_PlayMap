@@ -77,15 +77,18 @@ const state = reactive({
   newPostOpen: false,
   newTitle: "",
   newPlace: "",
+  newPlaceContentId: null,
   newContent: "",
   newPassword: "",
   newCategory: "",
+  allLocations: [],
   detailPostId: null,
   postActionType: null,
   actionPassword: "",
   actionError: false,
   editTitle: "",
   editPlace: "",
+  editPlaceContentId: null,
   editContent: "",
   editCategory: "",
   chatMessages: initialChatMessages,
@@ -119,13 +122,7 @@ const filteredPlaces = computed(() =>
 );
 
 const visiblePosts = computed(() => {
-  let list = state.posts.filter(
-    (p) =>
-      state.searchQuery === "" ||
-      p.title.includes(state.searchQuery) ||
-      p.place.includes(state.searchQuery) ||
-      p.content.includes(state.searchQuery),
-  );
+  let list = state.posts;
   if (state.sortMode === "popular") {
     list = [...list].sort((a, b) => b.likes - a.likes);
   } else if (state.sortMode === "views") {
@@ -143,6 +140,7 @@ function mapPostFromApi(item) {
     id: item.id,
     title: item.title,
     place: item.place,
+    contentid: item.contentid ?? null,
     category: item.category,
     content: item.content,
     password: "",
@@ -153,6 +151,35 @@ function mapPostFromApi(item) {
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   };
+}
+
+async function loadAllLocations() {
+  if (state.allLocations.length > 0) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/locations/all`);
+    if (!response.ok) throw new Error("장소 목록을 불러오지 못했습니다.");
+    state.allLocations = await response.json();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function setNewPlace(location) {
+  state.newPlace = location.title;
+  state.newPlaceContentId = String(location.contentid);
+}
+
+function setEditPlace(location) {
+  state.editPlace = location.title;
+  state.editPlaceContentId = String(location.contentid);
+}
+
+function findLocationByContentId(contentid) {
+  if (!contentid) return null;
+  return (
+    state.allLocations.find((loc) => loc.contentid === String(contentid)) ||
+    null
+  );
 }
 
 async function fetchPosts() {
@@ -264,6 +291,7 @@ function toggleNewPost() {
   state.newPostOpen = !state.newPostOpen;
   state.newTitle = "";
   state.newPlace = "";
+  state.newPlaceContentId = null;
   state.newContent = "";
   state.newPassword = "";
   state.newCategory = "";
@@ -284,6 +312,7 @@ async function submitPost() {
       body: JSON.stringify({
         title: state.newTitle.trim(),
         place: state.newPlace.trim() || "",
+        contentid: state.newPlaceContentId ? String(state.newPlaceContentId) : null,
         content: state.newContent.trim(),
         category: state.newCategory || "자유",
         password: state.newPassword.trim(),
@@ -351,6 +380,7 @@ function startEdit() {
   state.postActionType = "edit";
   state.editTitle = p.title;
   state.editPlace = p.place;
+  state.editPlaceContentId = p.contentid || null;
   state.editContent = p.content;
   state.editCategory = p.category || "자유";
   state.actionPassword = "";
@@ -379,6 +409,7 @@ async function confirmEdit() {
         password: state.actionPassword.trim(),
         title: state.editTitle.trim(),
         place: state.editPlace.trim(),
+        contentid: state.editPlaceContentId ? String(state.editPlaceContentId) : null,
         content: state.editContent.trim(),
         category: state.editCategory || "자유",
       }),
@@ -544,5 +575,9 @@ export function useAppStore() {
     fetchPosts,
     loadPosts,
     setCategoryFilter,
+    loadAllLocations,
+    setNewPlace,
+    setEditPlace,
+    findLocationByContentId,
   };
 }

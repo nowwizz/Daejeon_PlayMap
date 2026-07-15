@@ -46,7 +46,7 @@ export default defineComponent({
           <div
             style={{
               flexShrink: 0,
-              padding: "17px 22px 16px",
+              padding: "12px 16px 9px",
               background: THEME.main,
               display: "flex",
               flexDirection: "column",
@@ -55,14 +55,22 @@ export default defineComponent({
           >
             <div
               style={{
-                fontSize: "24px",
+                fontSize: "28px",
                 fontWeight: 300,
                 color: "#fff",
                 letterSpacing: "-0.02em",
                 fontFamily: "MitmiFont, Pretendard, sans-serif",
+                display: "flex",
+                alignItems: "center",
+                lineHeight: 1,
               }}
             >
-              어디 가유 <span style={{ fontSize: "21px" }}>🤔</span>
+              <img
+                src="/src/assets/logoChar.png"
+                alt=""
+                style={{ width: "35px", margin: "0 5px 5px 0" }}
+              />
+              어디 가유 ?
             </div>
           </div>
 
