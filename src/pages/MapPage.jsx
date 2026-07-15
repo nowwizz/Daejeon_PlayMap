@@ -16,7 +16,7 @@ const CATEGORY_CONTENT_TYPE = {
   관광지: '12',
   여행코스: '25',
   음식점: '39',
-  축제공연행사: '15'
+  축제: '15'
 }
 
 const CATEGORY_MARKER = {
