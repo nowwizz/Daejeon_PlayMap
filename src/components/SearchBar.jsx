@@ -65,8 +65,8 @@ export default defineComponent({
                   sortFocused.value = false;
                 }}
                 style={{
-                  minWidth: "80px",
-                  padding: "12px 7px 12px 10px",
+                  minWidth: "70px",
+                  padding: "11px 2px 11px 6px",
                   borderRadius: "11px",
                   border: sortFocused.value
                     ? "1px solid #00B398"

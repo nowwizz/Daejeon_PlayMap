@@ -3,6 +3,36 @@ import { PLACES } from "../data/places.js";
 import { POST_CATEGORIES, postCatStyle } from "../theme.js";
 
 const API_BASE_URL = "http://localhost:8000";
+const CHAT_STORAGE_KEY = "daejeon-playmap-chat";
+
+function loadStoredChatMessages() {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch (error) {
+    console.error("채팅 기록 로딩 실패", error);
+    return null;
+  }
+}
+
+function persistChatMessages() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(state.chatMessages));
+  } catch (error) {
+    console.error("채팅 기록 저장 실패", error);
+  }
+}
+
+const initialChatMessages = loadStoredChatMessages() || [
+  {
+    from: "bot",
+    text: "안녕하세요! 대전 놀거리 챗봇 꿈돌이에요.\n 알고 싶으신 놀거리에 대해 물어봐 주세요!",
+  },
+];
 
 const state = reactive({
   searchQuery: "",
@@ -27,8 +57,7 @@ const state = reactive({
   editTitle: "",
   editPlace: "",
   editContent: "",
-  editCategory: "",
-  chatMessages: [{ from: "bot", text: "안녕하세요! 대전 놀거리 챗봇이에요." }],
+  chatMessages: initialChatMessages,
   chatInput: "",
 });
 
@@ -159,35 +188,25 @@ function toggleNewPost() {
   state.newCategory = "";
 }
 
-async function submitPost() {
+function submitPost() {
   if (
     !state.newTitle.trim() ||
     !state.newContent.trim() ||
     !state.newPassword.trim()
   )
     return;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/posts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: state.newTitle.trim(),
-        content: state.newContent.trim(),
-        password: state.newPassword.trim(),
-        category: state.newCategory || "자유",
-        place: state.newPlace.trim() || "",
-        contentid: "",
-      }),
-    });
-
-    if (!response.ok) throw new Error("게시글 등록에 실패했습니다.");
-
-    await fetchPosts();
-    toggleNewPost();
-  } catch (error) {
-    console.error(error);
-  }
+  state.posts.unshift({
+    id: state.nextPostId,
+    title: state.newTitle,
+    place: state.newPlace || "장소 미지정",
+    category: state.newCategory || "자유",
+    content: state.newContent,
+    password: state.newPassword,
+    date: "오늘",
+    likes: 0,
+  });
+  state.nextPostId++;
+  toggleNewPost();
 }
 
 async function openDetail(id) {
@@ -239,7 +258,6 @@ function startEdit() {
   state.editTitle = p.title;
   state.editPlace = p.place;
   state.editContent = p.content;
-  state.editCategory = p.category || "자유";
   state.actionPassword = "";
   state.actionError = false;
 }
@@ -254,80 +272,100 @@ function cancelAction() {
   state.actionError = false;
 }
 
-async function confirmEdit() {
+function confirmEdit() {
   const p = detailPost.value;
-  if (!p) return;
-
-  const payload = {
-    password: state.actionPassword.trim(),
-  };
-
-  if (state.editTitle.trim()) payload.title = state.editTitle.trim();
-  if (state.editContent.trim()) payload.content = state.editContent.trim();
-  if (state.editPlace.trim()) payload.place = state.editPlace.trim();
-  if (state.editCategory) payload.category = state.editCategory;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/posts/${p.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("게시글 수정에 실패했습니다.");
-
-    await openDetail(p.id);
+  if (p && p.password === state.actionPassword) {
+    p.title = state.editTitle;
+    p.place = state.editPlace;
+    p.content = state.editContent;
     cancelAction();
-  } catch (error) {
-    state.actionError = true;
-    console.error(error);
-  }
+  } else state.actionError = true;
 }
 
-async function confirmDelete() {
+function confirmDelete() {
   const p = detailPost.value;
-  if (!p) return;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/posts/${p.id}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: state.actionPassword.trim() }),
-    });
-
-    if (!response.ok) throw new Error("게시글 삭제에 실패했습니다.");
-
+  if (p && p.password === state.actionPassword) {
     state.posts = state.posts.filter((x) => x.id !== p.id);
     closeDetail();
-    await fetchPosts();
-  } catch (error) {
-    state.actionError = true;
-    console.error(error);
-  }
+  } else state.actionError = true;
 }
 
-function botReply(text) {
-  const t = text.toLowerCase();
-  if (t.includes("자연") || t.includes("숲") || t.includes("산"))
-    return "장태산자연휴양림이나 대청호 오백리길을 추천드려요.";
-  if (t.includes("맛집") || t.includes("빵") || t.includes("먹"))
-    return "성심당 본점은 필수 코스예요! 소제동 카페거리도 함께 들러보세요.";
-  if (t.includes("온천") || t.includes("힐링") || t.includes("휴식"))
-    return "유성온천이나 계족산 황토길에서 여유롭게 힐링해보세요.";
-  if (t.includes("가족") || t.includes("아이") || t.includes("놀이"))
-    return "아이와 함께라면 대전오월드가 좋아요.";
-  if (t.includes("역사") || t.includes("전시") || t.includes("문화"))
-    return "대전근현대사전시관이나 뿌리공원을 추천해요.";
-  return "한빛탑, 성심당 본점, 대전오월드가 요즘 가장 인기예요. 지도에서 위치도 확인해보세요!";
+function buildChatHistory() {
+  return state.chatMessages
+    .filter((msg) => msg.text && msg.text.trim() !== "")
+    .map((msg) => ({
+      role: msg.from === "user" ? "user" : "assistant",
+      content: msg.text,
+    }));
 }
 
-function sendChat() {
+async function sendChat() {
   const text = state.chatInput.trim();
   if (!text) return;
+
   state.chatMessages.push({ from: "user", text });
+  persistChatMessages();
+
+  const botMessageIndex = state.chatMessages.length;
+  state.chatMessages.push({ from: "bot", text: "" });
+  persistChatMessages();
+
   state.chatInput = "";
-  const reply = botReply(text);
-  setTimeout(() => state.chatMessages.push({ from: "bot", text: reply }), 450);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        history: buildChatHistory(),
+      }),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error("챗봇 응답을 받지 못했습니다.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    const processChunk = (chunk) => {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      lines.forEach((line) => {
+        if (!line.startsWith("data: ")) return;
+
+        const dataStr = line.slice(6).trim();
+        if (!dataStr || dataStr === "[DONE]") return;
+
+        try {
+          const data = JSON.parse(dataStr);
+          if (data.type === "content" && typeof data.text === "string") {
+            state.chatMessages[botMessageIndex].text += data.text;
+            persistChatMessages();
+          }
+        } catch (error) {
+          console.error("챗봇 스트림 파싱 실패", error);
+        }
+      });
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      processChunk(value);
+    }
+
+    processChunk(new Uint8Array());
+    persistChatMessages();
+  } catch (error) {
+    state.chatMessages[botMessageIndex].text = `\n\n**[시스템 알림]** 챗봇 응답 생성 중 오류가 발생했습니다: ${error.message}`;
+    persistChatMessages();
+    console.error(error);
+  }
 }
 
 // 모듈 스코프 싱글턴 — 어디서 호출해도 같은 상태를 공유합니다 (Pinia 없이 구현한 경량 스토어)
