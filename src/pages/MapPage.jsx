@@ -2,7 +2,7 @@ import { defineComponent, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { useAppStore } from "../store/useAppStore.js";
-import { CATEGORIES } from "../theme.js";
+import { CATEGORIES, THEME } from "../theme.js";
 import SearchBar from "../components/SearchBar.jsx";
 import PlaceSheet from "../components/PlaceSheet.jsx";
 
@@ -45,30 +45,51 @@ const DEFAULT_MARKER = {
 
 const HIDDEN_CONTENT_TYPE_IDS = ["25"];
 
+// 카카오 클러스터러 기본 스타일(스프라이트 배경 등)은 그대로 두고 폰트/글자색만 덧씌웁니다.
+// 클러스터 라벨은 CSS class 없이 인라인 style로만 그려지기 때문에(clusterer.js DEFAULT_STYLES 참고),
+// styles 옵션으로 넘겨야만 실제로 적용됩니다.
+const CLUSTER_SPRITE_URL =
+  "https://i1.daumcdn.net/localimg/localimages/07/mapjsapi/cluster.png";
+
+const CLUSTER_STYLES = [52, 56, 66, 78, 90].map((size, index) => ({
+  width: `${size}px`,
+  height: `${size}px`,
+  lineHeight: `${index + size}px`,
+  fontSize: `${index * 2 + 17}px`,
+  background: `url(${CLUSTER_SPRITE_URL})`,
+  backgroundPosition: `0 ${-90 * index}px`,
+  textAlign: "center",
+  fontWeight: 500,
+  fontFamily: "IncheonEducationHimchan, Pretendard, sans-serif",
+  color: "#414141",
+}));
+
 export default defineComponent({
   name: "MapPage",
 
   setup() {
-    
     const {
       state,
       openPlaceDetail,
       collapseSheet,
       setMapCenter,
-      setMapPlaces
-    } = useAppStore()
+      setMapPlaces,
+    } = useAppStore();
 
-    const mapContainer = ref(null)
-    const allPlaces = ref([])
+    const route = useRoute();
+    const router = useRouter();
 
-    let map = null
-    let resizeObserver = null
-    let clusterer = null
-    let lastMapLevel = null
+    const mapContainer = ref(null);
+    const allPlaces = ref([]);
 
-    const filterHiddenCategories = (
-      places
-    ) => {
+    let map = null;
+    let resizeObserver = null;
+    let clusterer = null;
+    let lastMapLevel = null;
+    let placeMarkers = [];
+    let selectedMarkerEntry = null;
+
+    const filterHiddenCategories = (places) => {
       return (places ?? []).filter(
         (place) =>
           !HIDDEN_CONTENT_TYPE_IDS.includes(String(place.contenttypeid ?? "")),
@@ -229,6 +250,9 @@ export default defineComponent({
     };
 
     const clearPlaceClusters = () => {
+      placeMarkers = [];
+      selectedMarkerEntry = null;
+
       if (!clusterer) {
         return;
       }
@@ -236,6 +260,37 @@ export default defineComponent({
       clusterer.clear();
       clusterer.setMap(null);
       clusterer = null;
+    };
+
+    const highlightMarkerByContentId = (contentid) => {
+      const kakao = window.kakao;
+
+      if (selectedMarkerEntry) {
+        selectedMarkerEntry.marker.setImage(
+          createEmojiMarkerImage(kakao, selectedMarkerEntry.contenttypeid),
+        );
+        selectedMarkerEntry = null;
+      }
+
+      const entry = placeMarkers.find(
+        (item) => String(item.contentid) === String(contentid),
+      );
+
+      if (!entry) return;
+
+      entry.marker.setImage(
+        createEmojiMarkerImage(kakao, entry.contenttypeid, true),
+      );
+      selectedMarkerEntry = entry;
+    };
+
+    const clearMarkerHighlight = () => {
+      if (!selectedMarkerEntry) return;
+
+      selectedMarkerEntry.marker.setImage(
+        createEmojiMarkerImage(window.kakao, selectedMarkerEntry.contenttypeid),
+      );
+      selectedMarkerEntry = null;
     };
 
     const createPlaceClusters = (places) => {
@@ -272,11 +327,18 @@ export default defineComponent({
 
               openPlaceDetail(detail);
               moveMapToPlace(detail);
+              highlightMarkerByContentId(place.contentid);
 
               console.log("상세정보 조회 성공:", detail);
             } catch (error) {
               console.error("장소 상세 조회 실패:", error);
             }
+          });
+
+          placeMarkers.push({
+            marker,
+            contentid: place.contentid,
+            contenttypeid: place.contenttypeid,
           });
 
           return marker;
@@ -287,11 +349,14 @@ export default defineComponent({
         markers,
         averageCenter: true,
         minLevel: 7,
+        styles: CLUSTER_STYLES,
       });
     };
 
-    const createEmojiMarkerImage = (kakao, contenttypeid) => {
+    const createEmojiMarkerImage = (kakao, contenttypeid, isSelected) => {
       const marker = CATEGORY_MARKER[String(contenttypeid)] ?? DEFAULT_MARKER;
+      const strokeColor = isSelected ? THEME.main : "white";
+      const strokeWidth = isSelected ? 4 : 2;
 
       const svg = `
       <svg xmlns="http://www.w3.org/2000/svg"
@@ -306,8 +371,8 @@ export default defineComponent({
             C45 11 36 2 24 2Z"
 
           fill="${marker.color}"
-          stroke="white"
-          stroke-width="2"/>
+          stroke="${strokeColor}"
+          stroke-width="${strokeWidth}"/>
 
         <circle
           cx="24"
@@ -354,9 +419,24 @@ export default defineComponent({
       }
 
       const position = new window.kakao.maps.LatLng(latitude, longitude);
+      const kakao = window.kakao;
 
       map.setLevel(3);
-      map.panTo(position);
+
+      const containerHeight = mapContainer.value?.clientHeight ?? 0;
+
+      if (containerHeight > 0) {
+        const projection = map.getProjection();
+        const point = projection.pointFromCoords(position);
+        // 장소 상세 시트가 하단을 크게 덮으므로, 핀이 화면 중앙보다 위쪽에 오도록 보정합니다.
+        const offsetY = containerHeight * 0.32;
+        const shiftedPoint = new kakao.maps.Point(point.x, point.y + offsetY);
+        const targetLatLng = projection.coordsFromPoint(shiftedPoint);
+
+        map.panTo(targetLatLng);
+      } else {
+        map.panTo(position);
+      }
     };
 
     const searchPlace = async (keyword) => {
@@ -387,6 +467,7 @@ export default defineComponent({
       }
 
       moveMapToPlace(foundPlace);
+      highlightMarkerByContentId(foundPlace.contentid);
 
       try {
         const detail = await loadPlaceDetail(foundPlace.contentid);
@@ -401,41 +482,41 @@ export default defineComponent({
 
     const changeCategory = async (category) => {
       try {
-        state.selectedPlaceDetail =
-          null
-        collapseSheet()
+        state.selectedPlaceDetail = null;
+        collapseSheet();
 
-        state.categoryFilter =
-          category
+        state.categoryFilter = category;
 
-        const places =
-          await loadPlacesByCategory(
-            category
-          )
+        const places = await loadPlacesByCategory(category);
 
-        const visiblePlaces =
-          filterHiddenCategories(
-            places
-          )
+        const visiblePlaces = filterHiddenCategories(places);
 
-        allPlaces.value =
-          visiblePlaces
+        allPlaces.value = visiblePlaces;
 
-        setMapPlaces(
-          visiblePlaces
-        )
+        setMapPlaces(visiblePlaces);
 
-        createPlaceClusters(
-          visiblePlaces
-        )
+        createPlaceClusters(visiblePlaces);
 
-        console.log(
-          `[${category}] 장소 개수:`,
-          visiblePlaces.length
-        )
+        console.log(`[${category}] 장소 개수:`, visiblePlaces.length);
       } catch (error) {
         console.error(`[${category}] 장소 조회 실패:`, error);
       }
+    };
+
+    const handleQueryPlace = async (contentId) => {
+      if (!contentId) return;
+
+      try {
+        const detail = await loadPlaceDetail(contentId);
+
+        openPlaceDetail(detail);
+        moveMapToPlace(detail);
+        highlightMarkerByContentId(contentId);
+      } catch (error) {
+        console.error("공유된 장소 조회 실패:", error);
+      }
+
+      router.replace({ name: "map" });
     };
 
     onMounted(async () => {
@@ -450,31 +531,15 @@ export default defineComponent({
 
         allPlaces.value = visiblePlaces;
 
-        setMapPlaces(
-          visiblePlaces
-        )
+        setMapPlaces(visiblePlaces);
 
-        state.categoryFilter =
-          '전체'
+        state.categoryFilter = "전체";
 
         createPlaceClusters(visiblePlaces);
 
         console.log("[전체] 장소 개수:", visiblePlaces.length);
 
-        const targetContentId = route.query.place;
-
-        if (targetContentId) {
-          try {
-            const detail = await loadPlaceDetail(targetContentId);
-
-            openPlaceDetail(detail);
-            moveMapToPlace(detail);
-          } catch (error) {
-            console.error("공유된 장소 조회 실패:", error);
-          }
-
-          router.replace({ name: "map" });
-        }
+        await handleQueryPlace(route.query.place);
       } catch (error) {
         console.error("카카오맵 초기화 실패:", error);
       }
@@ -489,10 +554,25 @@ export default defineComponent({
           const detail = await loadPlaceDetail(newVal);
           openPlaceDetail(detail);
           moveMapToPlace(detail);
+          highlightMarkerByContentId(newVal);
           state.selectedNeighborPlace = null;
         } catch (error) {
           console.error("이웃 장소 상세 조회 실패:", error);
         }
+      },
+    );
+
+    watch(
+      () => state.selectedPlaceDetail,
+      (detail) => {
+        if (!detail) clearMarkerHighlight();
+      },
+    );
+
+    watch(
+      () => route.query.place,
+      (contentId) => {
+        if (contentId) handleQueryPlace(contentId);
       },
     );
 
@@ -542,7 +622,8 @@ export default defineComponent({
                 }}
                 style={{
                   padding: "9px 0",
-                  borderRadius: "20px",
+                  borderRadius: "15px",
+                  border: "0px",
                   fontSize: "12px",
                   fontWeight: 600,
                   whiteSpace: "nowrap",
@@ -552,8 +633,8 @@ export default defineComponent({
                   textAlign: "center",
                   transition: "background .2s ease, color .2s ease",
                   background:
-                    state.categoryFilter === cat ? "#00B398" : "#f2f2f2",
-                  color: state.categoryFilter === cat ? "#fff" : "#444",
+                    state.categoryFilter === cat ? "#00B398" : "#52968c2f",
+                  color: state.categoryFilter === cat ? "#fff" : "#4b4a4a",
                 }}
               >
                 {cat}

@@ -534,7 +534,7 @@ async function sendChat() {
   persistChatMessages();
 
   const botMessageIndex = state.chatMessages.length;
-  state.chatMessages.push({ from: "bot", text: "", sources: [] });
+  state.chatMessages.push({ from: "bot", text: "", sources: [], places: [] });
   persistChatMessages();
 
   state.chatInput = "";
@@ -574,12 +574,27 @@ async function sendChat() {
           if (data.type === "content" && typeof data.text === "string") {
             state.chatMessages[botMessageIndex].text += data.text;
             persistChatMessages();
-          } else if (data.type === "metadata" && Array.isArray(data.sources)) {
-            state.chatMessages[botMessageIndex].sources = [
-              ...new Set(
-                data.sources.map((s) => s.source).filter(Boolean),
-              ),
-            ];
+          } else if (data.type === "metadata") {
+            if (Array.isArray(data.sources)) {
+              state.chatMessages[botMessageIndex].sources = [
+                ...new Set(
+                  data.sources.map((s) => s.source).filter(Boolean),
+                ),
+              ];
+            }
+            if (Array.isArray(data.referenced_items)) {
+              const seen = new Set();
+              state.chatMessages[botMessageIndex].places = data.referenced_items
+                .filter((item) => {
+                  if (!item.contentid || seen.has(item.contentid)) return false;
+                  seen.add(item.contentid);
+                  return true;
+                })
+                .map((item) => ({
+                  contentid: item.contentid,
+                  title: item.title,
+                }));
+            }
             persistChatMessages();
           }
         } catch (error) {
@@ -595,6 +610,14 @@ async function sendChat() {
     }
 
     processChunk(new Uint8Array());
+
+    const finalMessage = state.chatMessages[botMessageIndex];
+    if (finalMessage.places && finalMessage.places.length > 0) {
+      finalMessage.places = finalMessage.places.filter(
+        (place) => place.title && finalMessage.text.includes(place.title),
+      );
+    }
+
     persistChatMessages();
   } catch (error) {
     state.chatMessages[botMessageIndex].text =
