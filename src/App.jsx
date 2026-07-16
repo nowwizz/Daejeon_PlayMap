@@ -7,6 +7,7 @@ import PlaceDetailModal from "./components/PlaceDetailModal.jsx";
 import PostDetailModal from "./components/PostDetailModal.jsx";
 import NewPostModal from "./components/NewPostModal.jsx";
 import ChatModal from "./components/ChatModal.jsx";
+import LoadingScreen from "./components/LoadingScreen.jsx";
 import logoCharImg from "./assets/logoChar.png";
 
 const TITLES = {
@@ -84,6 +85,8 @@ export default defineComponent({
           <PostDetailModal />
           <NewPostModal />
           <ChatModal />
+
+          <LoadingScreen />
         </div>
       </div>
     );

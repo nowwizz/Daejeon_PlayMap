@@ -7,9 +7,23 @@ import {
   onBeforeUnmount,
 } from "vue";
 
-function renderInlineMarkdown(text, onImageLoad) {
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderInlineMarkdown(text, onImageLoad, places, onPlaceClick) {
+  const placeTitles = (places || [])
+    .map((p) => p.title)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  const patternParts = ["\\*\\*[^*]+\\*\\*", "!\\[[^\\]]*\\]\\([^)]+\\)"];
+  if (placeTitles.length > 0) {
+    patternParts.push(`(?:${placeTitles.map(escapeRegExp).join("|")})`);
+  }
+
   const parts = text
-    .split(/(\*\*[^*]+\*\*|!\[[^\]]*\]\([^)]+\))/g)
+    .split(new RegExp(`(${patternParts.join("|")})`, "g"))
     .filter(Boolean);
 
   return parts.map((part, index) => {
@@ -38,11 +52,39 @@ function renderInlineMarkdown(text, onImageLoad) {
       );
     }
 
+    const matchedPlace = (places || []).find((p) => p.title === part);
+    if (matchedPlace) {
+      return (
+        <span key={index} style={{ lineHeight: "1px" }}>
+          {part}
+          <span
+            onClick={() => onPlaceClick?.(matchedPlace.contentid)}
+            style={{
+              display: "inline-block",
+              marginLeft: "6px",
+              marginBottom: "2px",
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "#ffffff",
+              padding: "8px 5px",
+              borderRadius: "6px",
+              background: "#00B398",
+              cursor: "pointer",
+              verticalAlign: "middle",
+              whiteSpace: "nowrap",
+            }}
+          >
+            바로가기
+          </span>
+        </span>
+      );
+    }
+
     return <span key={index}>{part}</span>;
   });
 }
 
-function renderMarkdown(text, onImageLoad) {
+function renderMarkdown(text, onImageLoad, places, onPlaceClick) {
   const lines = text.split(/\n/);
   const elements = [];
   let inCodeBlock = false;
@@ -96,7 +138,9 @@ function renderMarkdown(text, onImageLoad) {
             ? { fontSize: "13px", fontWeight: 700, margin: "5px 0 2px" }
             : { fontSize: "12.5px", fontWeight: 700, margin: "4px 0 2px" };
       elements.push(
-        <div style={style}>{renderInlineMarkdown(content, onImageLoad)}</div>,
+        <div style={style}>
+          {renderInlineMarkdown(content, onImageLoad, places, onPlaceClick)}
+        </div>,
       );
       return;
     }
@@ -108,6 +152,8 @@ function renderMarkdown(text, onImageLoad) {
           {renderInlineMarkdown(
             trimmed.replace(/^\s*[-*]\s+/, ""),
             onImageLoad,
+            places,
+            onPlaceClick,
           )}
         </div>,
       );
@@ -120,6 +166,8 @@ function renderMarkdown(text, onImageLoad) {
           {renderInlineMarkdown(
             trimmed.replace(/^\s*\d+\.\s+/, ""),
             onImageLoad,
+            places,
+            onPlaceClick,
           )}
         </div>,
       );
@@ -129,7 +177,7 @@ function renderMarkdown(text, onImageLoad) {
     if (trimmed) {
       elements.push(
         <div style={{ margin: "2px 0 0" }}>
-          {renderInlineMarkdown(trimmed, onImageLoad)}
+          {renderInlineMarkdown(trimmed, onImageLoad, places, onPlaceClick)}
         </div>,
       );
     } else if (index < lines.length - 1) {
@@ -144,6 +192,7 @@ function formatSourceName(name) {
   return name.replace(/\.[a-zA-Z0-9]{1,5}$/, "");
 }
 
+import { useRouter } from "vue-router";
 import { useAppStore } from "../store/useAppStore.js";
 import { THEME } from "../theme.js";
 import aiCharImg from "../assets/AIChar.png";
@@ -152,6 +201,7 @@ export default defineComponent({
   name: "ChatModal",
   setup() {
     const { state, toggleChat, sendChat } = useAppStore();
+    const router = useRouter();
     const chatInputFocused = ref(false);
     const isClosing = ref(false);
     const messageListRef = ref(null);
@@ -254,6 +304,12 @@ export default defineComponent({
         toggleChat();
         isClosing.value = false;
       }, 220);
+    };
+
+    const goToPlaceOnMap = (contentid) => {
+      if (!contentid) return;
+      closeChat();
+      router.push({ name: "map", query: { place: contentid } });
     };
 
     return () =>
@@ -374,7 +430,12 @@ export default defineComponent({
                           ).join(" ")}
                         </span>
                       ) : (
-                        renderMarkdown(msg.text, scrollToBottom)
+                        renderMarkdown(
+                          msg.text,
+                          scrollToBottom,
+                          msg.places,
+                          goToPlaceOnMap,
+                        )
                       )
                     ) : (
                       msg.text

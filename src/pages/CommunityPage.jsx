@@ -227,22 +227,6 @@ export default defineComponent({
                       >
                         <span
                           style={{
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            minWidth: 0,
-                          }}
-                        >
-                          {
-                            topPosts.value[
-                              tickerIndex.value % topPosts.value.length
-                            ].title
-                          }
-                        </span>
-                        <span
-                          style={{
                             fontSize: "10.5px",
                             fontWeight: 500,
                             padding: "2px 7px",
@@ -264,6 +248,22 @@ export default defineComponent({
                             topPosts.value[
                               tickerIndex.value % topPosts.value.length
                             ].category
+                          }
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 500,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            minWidth: 0,
+                          }}
+                        >
+                          {
+                            topPosts.value[
+                              tickerIndex.value % topPosts.value.length
+                            ].title
                           }
                         </span>
                       </div>
@@ -292,60 +292,88 @@ export default defineComponent({
                   ▾
                 </div>
               </div>
-              {expanded.value && (
-                <div>
-                  {topPosts.value.map((post, i) => (
-                    <div
-                      key={post.id}
-                      onClick={() => openDetail(post.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "3px 12px 9px 12px",
-                        cursor: "pointer",
-                      }}
-                    >
+              <Transition
+                onEnter={(el, done) => {
+                  el.style.height = "0px";
+                  el.style.overflow = "hidden";
+                  requestAnimationFrame(() => {
+                    el.style.transition = "height .25s ease";
+                    el.style.height = `${el.scrollHeight}px`;
+                  });
+                  el.addEventListener("transitionend", done, { once: true });
+                }}
+                onAfterEnter={(el) => {
+                  el.style.height = "";
+                  el.style.overflow = "";
+                  el.style.transition = "";
+                }}
+                onLeave={(el, done) => {
+                  el.style.height = `${el.scrollHeight}px`;
+                  el.style.overflow = "hidden";
+                  requestAnimationFrame(() => {
+                    el.style.transition = "height .25s ease";
+                    el.style.height = "0px";
+                  });
+                  el.addEventListener("transitionend", done, { once: true });
+                }}
+              >
+                {expanded.value && (
+                  <div>
+                    {topPosts.value.map((post, i) => (
                       <div
+                        key={post.id}
+                        onClick={() => openDetail(post.id)}
                         style={{
-                          fontSize: "11px",
-                          fontWeight: 800,
-                          color: "#ccc",
-                          flexShrink: 0,
+                          display: "flex",
+                          width: "100%",
+                          justifyContent: "flex-start",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "3px 12px 9px 12px",
+                          cursor: "pointer",
                         }}
                       >
-                        {i + 1}
+                        <div
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: 800,
+                            color: "#c54444",
+                            flexShrink: 0,
+                            marginRight: "7px",
+                          }}
+                        >
+                          {i + 1}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 500,
+                            padding: "2px 7px",
+                            borderRadius: "6px",
+                            flexShrink: 0,
+                            background: postCatStyle(post.category).bg,
+                            color: postCatStyle(post.category).fg,
+                          }}
+                        >
+                          {post.category}
+                        </div>
+                        <div
+                          style={{
+                            minWidth: 0,
+                            fontSize: "12.5px",
+                            fontWeight: 500,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {post.title}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          fontSize: "12.5px",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {post.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "10.5px",
-                          fontWeight: 500,
-                          padding: "2px 7px",
-                          borderRadius: "6px",
-                          flexShrink: 0,
-                          background: postCatStyle(post.category).bg,
-                          color: postCatStyle(post.category).fg,
-                        }}
-                      >
-                        {post.category}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </Transition>
             </div>
           )}
 
@@ -359,21 +387,22 @@ export default defineComponent({
                 style={{
                   borderRadius: "14px",
                   padding: "14px",
-                  background: "#9cd1c93a",
+                  background: "transparent",
                   cursor: "pointer",
                   transition: "transform .16s ease, box-shadow .16s ease",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                  boxShadow:
+                    "0 6px 18px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.1)",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform =
                     "translateY(-2px) scale(1.01)";
                   e.currentTarget.style.boxShadow =
-                    "0 8px 20px rgba(0,0,0,0.08)";
+                    "0 14px 30px rgba(0,0,0,0.24), 0 2px 5px rgba(0,0,0,0.12)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0) scale(1)";
                   e.currentTarget.style.boxShadow =
-                    "0 2px 10px rgba(0,0,0,0.04)";
+                    "0 6px 18px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.1)";
                 }}
               >
                 <div
@@ -418,7 +447,7 @@ export default defineComponent({
                         fontSize: "12px",
                         color: THEME.main,
                         fontWeight: 600,
-                        marginTop: "2px",
+                        marginTop: "3px",
                       }}
                     >
                       {post.place}
